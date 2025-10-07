@@ -1,4 +1,4 @@
-package model;
+package model.roadElement;
 
 import model.math.Point;
 
