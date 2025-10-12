@@ -2,7 +2,7 @@ package model.roadElement;
 
 import model.math.Point;
 
-public class Semaphore implements RoadElement {
+public class TrafficLight implements RoadElement {
 
     public enum State {
         RED,
@@ -14,7 +14,7 @@ public class Semaphore implements RoadElement {
     private final Point position;
     private final int streetId; // Identifier for the street this semaphore belongs to
 
-    public Semaphore(Point position , int streetId) {
+    public TrafficLight(Point position , int streetId) {
         this.streetId = streetId;
         this.position = position;
         this.state = State.RED; // Default state
