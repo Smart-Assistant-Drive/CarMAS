@@ -4,11 +4,17 @@ import model.math.Point;
 
 public class Sign implements RoadElement  {
 
+    public enum SignType {
+        STOP,
+        YIELD,
+        SPEED_LIMIT
+    }
+
     private final Point position;
     private final int streetId; // Identifier for the street this sign belongs to
-    private final String type; // Type of sign (e.g., "STOP", "YIELD", "SPEED_LIMIT")
+    private final SignType type; // Type of sign (e.g., "STOP", "YIELD", "SPEED_LIMIT")
 
-    public Sign(Point position, int streetId, String type) {
+    public Sign(Point position, int streetId, SignType type) {
         this.position = position;
         this.streetId = streetId;
         this.type = type;
@@ -22,7 +28,7 @@ public class Sign implements RoadElement  {
         return streetId;
     }
 
-    public String getType() {
+    public SignType getType() {
         return type;
     }
 }
