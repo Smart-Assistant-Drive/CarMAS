@@ -12,7 +12,7 @@ import java.util.List;
 import static model.math.Points.vector;
 
 public class Movement {
-    private Car car;
+    private final Car car;
     private Road road;
     private List<RoadElement> roadElements;
     private final List<Integer> roadElementsIndex;
