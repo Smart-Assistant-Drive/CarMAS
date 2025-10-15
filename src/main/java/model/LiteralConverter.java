@@ -2,18 +2,16 @@ package model;
 
 import jason.asSyntax.Literal;
 import model.math.Point;
-import model.roadElement.RoadElement;
 import model.roadElement.Sign;
 import model.roadElement.TrafficLight;
 
 public class LiteralConverter {
-
-    public static String NEXT_STREET_ELEMENT_BASE = "next_street_element(TYPE, X, Y)";
+    
     public static String POSITION_BASE = "position(X, Y)";
     public static String CURRENT_SPEED_BASE = "currentSpeed(CS)";
     public static String SPEED_LIMIT_BASE = "speedLimit(LIMIT)";
-    public static String SIGN_TYPE_BASE = "sign(TYPE, X, Y)";
-    public static String TRAFFIC_LIGHT_BASE = "traffic_light(STATE, X, Y)";
+    public static String SIGN_TYPE_BASE = "element(TYPE, X, Y)";
+    public static String TRAFFIC_LIGHT_BASE = "element(traffic_light(STATE), X, Y)";
 
     public static Literal positionToLiteral(Point p) {
         return Literal.parseLiteral(POSITION_BASE.replace("X", String.valueOf(p.getX()))
