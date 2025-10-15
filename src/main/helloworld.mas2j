@@ -2,8 +2,10 @@ MAS helloworld {
 
 	infrastructure: Centralised
 
+	environment: env.CarEnvironment()
+
 	agents:
-		agent1 hello_agent;
+		agent1 car_agent;
 
 	aslSourcePath:
 		"src/main/asl";
