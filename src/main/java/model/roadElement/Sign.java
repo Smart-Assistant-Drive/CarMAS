@@ -13,6 +13,7 @@ public class Sign implements RoadElement  {
     private final Point position;
     private final int streetId; // Identifier for the street this sign belongs to
     private final SignType type; // Type of sign (e.g., "STOP", "YIELD", "SPEED_LIMIT")
+    private boolean used = false;
 
     public Sign(Point position, int streetId, SignType type) {
         this.position = position;
@@ -30,5 +31,13 @@ public class Sign implements RoadElement  {
 
     public SignType getType() {
         return type;
+    }
+
+    public boolean isUsed() {
+        return used;
+    }
+
+    public void useSignal() {
+        this.used = true;
     }
 }
