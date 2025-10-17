@@ -38,7 +38,7 @@ public class Movement {
             double abLen2 = ab.lengthSquared();
             double t = abLen2 != 0 ? Vectors.dot(ab, ap) / abLen2 : 0;
 
-            if (t >= 0 && t <= 1) {
+            if (t >= 0 && t < 1) {
                 // P proietta dentro al segmento
                 return i;
             } else if (t < 0) {
