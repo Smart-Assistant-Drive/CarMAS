@@ -6,12 +6,13 @@ import model.roadElement.Sign;
 import model.roadElement.TrafficLight;
 
 public class LiteralConverter {
-    
+
     public static String POSITION_BASE = "position(X, Y)";
     public static String CURRENT_SPEED_BASE = "currentSpeed(CS)";
     public static String SPEED_LIMIT_BASE = "speedLimit(LIMIT)";
     public static String SIGN_TYPE_BASE = "element(TYPE, X, Y)";
     public static String TRAFFIC_LIGHT_BASE = "element(traffic_light(STATE), X, Y)";
+    public static String OTHER_CAR_BASE = "car(X, Y, SPEED)";
 
     public static Literal positionToLiteral(Point p) {
         return Literal.parseLiteral(POSITION_BASE.replace("X", String.valueOf(p.getX()))
@@ -40,5 +41,11 @@ public class LiteralConverter {
         return Literal.parseLiteral(TRAFFIC_LIGHT_BASE.replace("STATE", tl.getState().toString().toLowerCase())
                 .replace("X", String.valueOf(tl.getPosition().getX()))
                 .replace("Y", String.valueOf(tl.getPosition().getY())));
+    }
+
+    public static Literal otherCarToLiteral(Car car) {
+        return Literal.parseLiteral(OTHER_CAR_BASE.replace("X", String.valueOf(car.getPosition().getX()))
+                .replace("Y", String.valueOf(car.getPosition().getY()))
+                .replace("SPEED", String.valueOf(car.getSpeed())));
     }
 }
