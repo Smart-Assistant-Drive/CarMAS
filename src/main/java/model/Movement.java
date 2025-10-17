@@ -84,9 +84,9 @@ public class Movement {
     }
 
     public void move(double distance) {
-        Point currentPosition = car.getPosition();
         Point[] path = road.getPath();
         while (distance > 0 && index < path.length - 1) {
+            Point currentPosition = car.getPosition();
             Point nextPoint = path[index + 1];
             double segmentLength = Points.distance(currentPosition, nextPoint);
 
