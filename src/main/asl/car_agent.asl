@@ -6,12 +6,40 @@ red.
 yellow.
 green.
 
-near(X1, Y1, X2, Y2) :- DX = abs(X1 - X2)
-                        & DY = abs(Y1 - Y2)
-                        & DX < 5
-                        & DY < 5.
+driver.
+autonomous.
+mode(driver).
 
-distance(X1, Y1, X2, Y2, D) :- D = sqrt((X1 - X2)*(X1 - X2) + (Y1 - Y2)*(Y1 - Y2)).
+
+car_on.
+car_off.
+
+car_state(car_off).
+
+break_speed(5).
+drag_speed(0.25).
+reaction_time(1.5).
+
+near(X1, Y1, X2, Y2, DN) :-
+    distance(X1, Y1, X2, Y2, D) & D < DN.
+
+distance_to_stop(CS, DECEL, SD) :-
+    reaction_time(RT)
+    & SD = (CS * CS) / (2 * DECEL) + (CS * RT).
+
+stopping_distance(CS, SD) :- break_speed(BS) & distance_to_stop(CS, BS, SD).
+dragging_distance(CS, SD) :- drag_speed(DS) & distance_to_stop(CS, DS, SD).
+
+stopping(X1, Y1, X2, Y2, CS) :- distance(X1, Y1, X2, Y2, D)
+                                & stopping_distance(CS, SD)
+                                & D < SD + 10.
+
+dragging(X1, Y1, X2, Y2, CS) :- distance(X1, Y1, X2, Y2, D)
+                                 & dragging_distance(CS, SD)
+                                 & D < SD + 10.
+
+distance(X1, Y1, X2, Y2, D) :-
+    utils.sqrt(D, (X1 - X2)*(X1 - X2) + (Y1 - Y2)*(Y1 - Y2)).
 
 /* Safe distance rules */
 
@@ -30,9 +58,9 @@ dynamic_safe_distance(CS, OS, SD) :-
     normal_safe_distance(S, SD).
 
 /* Define which elements require the car to stop or slow down */
-arrest_car_event(E, SX, SY) :- E = element(stop, SX, SY).
-arrest_car_event(E, SX, SY) :- E = element(traffic_light(red), SX, SY).
-arrest_car_event(E, SX, SY) :- E = element(traffic_light(yellow), SX, SY).
+arrest_car_event(E, SX, SY) :- element(stop, SX, SY) & E = stop.
+arrest_car_event(E, SX, SY) :- element(traffic_light(red), SX, SY) & E = traffic_light(red).
+arrest_car_event(E, SX, SY) :- element(traffic_light(yellow), SX, SY) & E = traffic_light(yellow).
 
 /* -------------------------------------------------
    Events
@@ -44,11 +72,35 @@ arrest_car_event(E, SX, SY) :- E = element(traffic_light(yellow), SX, SY).
     .print("Restarting the car agent");
     !reachSpeedLimit.
 
++autonomous_mode <-
+    .print("Switching to autonomous driving mode");
+    -mode(driver);
+    +mode(autonomous);
+    !reachSpeedLimit.
+
++driver_mode <-
+    .print("Switching to driver mode (manual control)");
+    -mode(autonomous);
+    +mode(driver).
+
++car_started <-
+    .print("Car engine started");
+    -car_state(car_off);
+    +car_state(car_on);
+    !move_car.
+
+
++car_stopped <-
+    .print("Car engine stopped");
+    -car_state(car_on);
+    +car_state(car_off).
+
+
 +car(X, Y, S) <-
     .print("Detected car ahead at (", X, ", ", Y, ") moving at speed ", S).
 
 /* When the light turns green (environment percept updated) */
-+element(traffic_light(green), SX, SY) : position(X, Y) & near(X, Y, SX, SY) <-
++element(traffic_light(green), SX, SY) : near(X, Y, SX, SY, 10) <-
     .print("Traffic light at (", SX, ", ", SY, ") turned green, resuming driving");
     !reachSpeedLimit.
 
@@ -56,34 +108,68 @@ arrest_car_event(E, SX, SY) :- E = element(traffic_light(yellow), SX, SY).
    Initial goals
 ---------------------------------------------------*/
 
-!move_car.
-!reachSpeedLimit.
-
 /* -------------------------------------------------
    Plans
 ---------------------------------------------------*/
 
-+!move_car <-
++!move_car : car_state(car_on) <-
     .print("Moving car to new position");
     .wait(1000);
     move;
     !move_car.
 
++!move_car : car_state(car_off) <-
+    .print("Car is off, cannot move").
+
+/* 0. Disable autonomous driving */
++!reachSpeedLimit : mode(driver) <-
+    .print("Autonomous driving is disabled").
+
++!reachSpeedLimit : car_state(car_off) <-
+    -mode(autonomous);
+    +mode(driver);
+    .print("Car is off, cannot reach speed limit").
+
 /* 1. Handle stop signs and traffic lights */
+/*
++!reachSpeedLimit : arrest_car_event(E, SX, SY)
+                    & currentSpeed(CS)
+                    & position(X, Y)
+                    & distance(X, Y, SX, SY, D)
+                     <-
+    .print("Detected ", E, " element at (", SX, ", ", SY, ")");
+    .print("Speed is ", CS, ", need to approach and stop if needed");
+    .print("Position is (", X, ", ", Y, ")");
+    .print("Distance to ", E, " element is ", D, "m");
+    .wait(1000);
+    !reachSpeedLimit.
+*/
 
 +!reachSpeedLimit : arrest_car_event(E, SX, SY)
                     & currentSpeed(CS)
                     & position(X, Y)
-                    & near(X, Y, SX, SY)
+                    & stopping(X, Y, SX, SY, CS)
                     & CS > 0 <-
-    .print("Approaching ", E, " element at (", SX, ", ", SY, "), slowing down");
+    .print("Approaching ", E, " element at (", SX, ", ", SY, "), slowing down with brakes");
     brake;
     .wait(1000);
     !reachSpeedLimit.
 
+
++!reachSpeedLimit : arrest_car_event(E, SX, SY)
+                    & currentSpeed(CS)
+                    & position(X, Y)
+                    & dragging(X, Y, SX, SY, CS)
+                    & CS > 15 <-
+    .print("Approaching ", E, " element at (", SX, ", ", SY, "), slowing down");
+    do_nothing;
+    .wait(1000);
+    !reachSpeedLimit.
+
+
 +!reachSpeedLimit : arrest_car_event(E, SX, SY)
                     & position(X, Y)
-                    & near(X, Y, SX, SY)
+                    & near(X, Y, SX, SY, 10)
                     & currentSpeed(0) <-
     .print("Stopped at ", E, " sign (", SX, ", ", SY, "), waiting before resuming");
     .wait(2000);
@@ -171,4 +257,3 @@ arrest_car_event(E, SX, SY) :- E = element(traffic_light(yellow), SX, SY).
     do_nothing;
     .wait(1000);
     !reachSpeedLimit.
-
