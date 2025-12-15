@@ -1,5 +1,7 @@
 package env;
 
+import gui.GUI;
+import gui.GUIEventInterface;
 import jason.asSyntax.Literal;
 import jason.asSyntax.Structure;
 import jason.environment.Environment;
@@ -12,6 +14,9 @@ import model.math.Point;
 import model.Road;
 import model.roadElement.SpeedLimitSign;
 
+import javax.swing.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -20,34 +25,74 @@ import static model.LiteralConverter.*;
 
 public class CarEnvironment extends Environment {
 
-    // action literals
-    // private static final Literal move = Literal.parseLiteral("move");
-
     static Logger logger = Logger.getLogger(CarEnvironment.class.getName());
 
     private Movement movement;
+    private String licenseNumber = "";
     private final Car car = new Car(new Point(0, 0), 0);
     private final Optional<Car> otherCar = //Optional.of(new Car(new Point(10_000, 10_000), 0));
             Optional.empty();
+    private GUI gui = null;
 
     @Override
     public void init(final String[] args) {
         logger.info("Initializing environment...");
+        CarEnvironment env = this;
+        gui = new GUI(new GUIEventInterface() {
+            @Override
+            public void onInsertLicense(String licenseNumber) {
+                env.licenseNumber = licenseNumber;
+            }
+
+            @Override
+            public void onStartCar() {
+                logger.info("Car started with license: " + env.licenseNumber);
+                removePercept(Literal.parseLiteral("car_stopped"));
+                addPercept(Literal.parseLiteral("car_started"));
+            }
+
+            @Override
+            public void onStopCar() {
+                logger.info("Car stopped.");
+                removePercept(Literal.parseLiteral("car_started"));
+                addPercept(Literal.parseLiteral("car_stopped"));
+            }
+
+            @Override
+            public void onSpeedChange(double newSpeed) {
+                car.setSpeed(newSpeed);
+                updatePercepts();
+                logger.info("Car speed changed to: " + newSpeed);
+            }
+
+            @Override
+            public void onToggleAutonomousModeChange(boolean isAutonomous) {
+                if (isAutonomous) {
+                    logger.info("Autonomous mode enabled.");
+                    removePercept(Literal.parseLiteral("driver_mode"));
+                    addPercept(Literal.parseLiteral("autonomous_mode"));
+                } else {
+                    logger.info("Manual mode enabled.");
+                    removePercept(Literal.parseLiteral("autonomous_mode"));
+                    addPercept(Literal.parseLiteral("driver_mode"));
+                }
+
+            }
+        });
+        SwingUtilities.invokeLater(() -> gui.setVisible(true));
+
         movement = new Movement(
                 car,
                 new Road(new Point[]{
                         new Point(0, 0),
-                        new Point(10, 0),
-                        new Point(10, 10),
-                        new Point(0, 10)
+                        new Point(200, 0),
+                        new Point(200, 200),
+                        new Point(0, 200)
                 })
         );
         movement.setRoadElements(
                 Stream.of(
-                        new Point(5, 0),
-                        new Point(10, 5),
-                        new Point(5, 10),
-                        new Point(0, 5)
+                        new Point(200, 0)
                 ).map(
                         p -> (RoadElement) new Sign(p, 0, Sign.SignType.STOP)
                 ).toList()
@@ -69,15 +114,18 @@ public class CarEnvironment extends Environment {
         addPercept(positionToLiteral(car.getPosition()));
         logger.info("position added");
 
-
-        //otherCar.ifPresent(value -> addPercept(Literal.parseLiteral(String.format("otherCarPosition(%.2f, %.2f)", value.getPosition().getX(), value.getPosition().getY()))));
-        //otherCar.ifPresent(value -> addPercept(Literal.parseLiteral(String.format("otherCarSpeed(%.2f)", value.getSpeed()))));
+        otherCar.ifPresent(value -> {
+            var otherCarLiteral = otherCarToLiteral(value);
+            addPercept(otherCarLiteral);
+        });
+        logger.info("other car added: " + otherCar);
 
         logger.info("Finished environment...");
     }
 
     private void updatePercepts() {
         //clearPercepts();
+        List<Literal> actualPercepts = new ArrayList<>();
         final Point pos = car.getPosition();
         logger.info(String.format("Current position: (%.2f, %.2f)", pos.getX(), pos.getY()));
         removePerceptsByUnif(Literal.parseLiteral(POSITION_BASE));
@@ -90,21 +138,40 @@ public class CarEnvironment extends Environment {
         );*/
         removePerceptsByUnif(Literal.parseLiteral(CURRENT_SPEED_BASE));
         addPercept(currentSpeedToLiteral(car.getSpeed()));
+        gui.changeSpeed(car.getSpeed());
         removePerceptsByUnif(Literal.parseLiteral(SPEED_LIMIT_BASE));
-        addPercept(
-                speedLimitToLiteral(
-                        RoadElements.getLastSpeedLimitSign(
+        var speedLimitLiteral = speedLimitToLiteral(
+                RoadElements.getLastSpeedLimitSign(
                                 movement.getPassedStreetElements()
-                                )
+                        )
                         .map(SpeedLimitSign::getSpeedLimit)
                         .orElse(60)
-                    )
         );
+        actualPercepts.add(speedLimitLiteral);
+        addPercept(speedLimitLiteral);
         removePerceptsByUnif(signTypeToLiteral(Sign.SignType.STOP));
         RoadElements.getNextStopSign(movement.getNextStreetElements())
-                .ifPresent(s -> addPercept(signToLiteral(s)));
+                .ifPresent(s -> {
+                    var signLiteral = signToLiteral(s);
+                    actualPercepts.add(signLiteral);
+                    addPercept(signLiteral);
+                });
         RoadElements.getNextTrafficLight(movement.getNextStreetElements())
-                .ifPresent(s -> addPercept(trafficLightToLiteral(s)));
+                .ifPresent(s -> {
+                    var trafficLightLiteral = trafficLightToLiteral(s);
+                    actualPercepts.add(trafficLightLiteral);
+                    addPercept(trafficLightLiteral);
+                });
+
+
+        otherCar.ifPresent(value -> {
+            var otherCarLiteral = otherCarToLiteral(value);
+            actualPercepts.add(otherCarLiteral);
+            addPercept(otherCarLiteral);
+        });
+
+        var info = actualPercepts.stream().map(Literal::toString).reduce("", (a, b) -> a + b + "\n");
+        gui.changeInfo(info);
 
         logger.info(String.format("Current speed: %.2f", car.getSpeed()));
 
@@ -156,6 +223,7 @@ public class CarEnvironment extends Environment {
                     movement.move(distance);
                     break;
                 case "passedStop":
+                    logger.info(ag + " is passed: " + action);
                     RoadElements.getNextStopSign(movement.getNextStreetElements())
                             .ifPresent(Sign::useSignal);
                     new Thread(
