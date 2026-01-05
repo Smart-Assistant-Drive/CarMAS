@@ -7,7 +7,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class CarUpdateMessage {
     private final String idCar;
     private final double currentSpeed;
-    private final int indexLane;
+    private final int lane;
+    private final String state;
     private final double positionX;
     private final double positionY;
     private final int indexP;
@@ -17,7 +18,8 @@ public class CarUpdateMessage {
     public CarUpdateMessage(
             @JsonProperty("idCar") String idCar,
             @JsonProperty("currentSpeed") double currentSpeed,
-            @JsonProperty("indexLane") int indexLane,
+            @JsonProperty("lane") int lane,
+            @JsonProperty("state") String state,
             @JsonProperty("positionX") double positionX,
             @JsonProperty("positionY") double positionY,
             @JsonProperty("indexP") int indexP,
@@ -26,7 +28,8 @@ public class CarUpdateMessage {
     ) {
         this.idCar = idCar;
         this.currentSpeed = currentSpeed;
-        this.indexLane = indexLane;
+        this.lane = lane;
+        this.state = state;
         this.positionX = positionX;
         this.positionY = positionY;
         this.indexP = indexP;
@@ -36,7 +39,8 @@ public class CarUpdateMessage {
 
     public String getIdCar() { return idCar; }
     public double getCurrentSpeed() { return currentSpeed; }
-    public int getIndexLane() { return indexLane; }
+    public int getLane() { return lane; }
+    public String getState() { return state; }
     public double getPositionX() { return positionX; }
     public double getPositionY() { return positionY; }
     public int getIndexP() { return indexP; }
