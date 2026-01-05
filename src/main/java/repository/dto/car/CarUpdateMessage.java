@@ -1,0 +1,45 @@
+package repository.dto.car;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class CarUpdateMessage {
+    private final String idCar;
+    private final double currentSpeed;
+    private final int indexLane;
+    private final double positionX;
+    private final double positionY;
+    private final int indexP;
+    private final double dPointX;
+    private final double dPointY;
+
+    public CarUpdateMessage(
+            @JsonProperty("idCar") String idCar,
+            @JsonProperty("currentSpeed") double currentSpeed,
+            @JsonProperty("indexLane") int indexLane,
+            @JsonProperty("positionX") double positionX,
+            @JsonProperty("positionY") double positionY,
+            @JsonProperty("indexP") int indexP,
+            @JsonProperty("dPointX") double dPointX,
+            @JsonProperty("dPointY") double dPointY
+    ) {
+        this.idCar = idCar;
+        this.currentSpeed = currentSpeed;
+        this.indexLane = indexLane;
+        this.positionX = positionX;
+        this.positionY = positionY;
+        this.indexP = indexP;
+        this.dPointX = dPointX;
+        this.dPointY = dPointY;
+    }
+
+    public String getIdCar() { return idCar; }
+    public double getCurrentSpeed() { return currentSpeed; }
+    public int getIndexLane() { return indexLane; }
+    public double getPositionX() { return positionX; }
+    public double getPositionY() { return positionY; }
+    public int getIndexP() { return indexP; }
+    public double getDPointX() { return dPointX; }
+    public double getDPointY() { return dPointY; }
+}
