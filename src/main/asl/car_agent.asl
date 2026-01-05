@@ -96,8 +96,8 @@ arrest_car_event(E, SX, SY) :- element(traffic_light(yellow), SX, SY) & E = traf
     +car_state(car_off).
 
 
-+car(X, Y, S) <-
-    .print("Detected car ahead at (", X, ", ", Y, ") moving at speed ", S).
++car(D, S) <-
+    .print("Detected car ahead ",D, moving at speed ", S).
 
 /* When the light turns green (environment percept updated) */
 +element(traffic_light(green), SX, SY) : near(X, Y, SX, SY, 10) <-
@@ -180,12 +180,11 @@ arrest_car_event(E, SX, SY) :- element(traffic_light(yellow), SX, SY) & E = traf
 /* 2. Maintain safe distance from other cars */
 
 /* When the car ahead is too close — brake (dynamic distance) */
-+!reachSpeedLimit : car(X, Y, OS)
++!reachSpeedLimit : car(D, OS)
                     & position(CX, CY)
                     & currentSpeed(CS)
                     & CS > OS
                     & dynamic_safe_distance(CS, OS, DSD)
-                    & distance(CX, CY, X, Y, D)
                     & D < DSD <-
     .print("Too close to car ahead at (", X, ", ", Y, "), brake. Dynamic safe distance = ", DSD, "m, actual = ", D, "m");
     brake;
@@ -193,12 +192,11 @@ arrest_car_event(E, SX, SY) :- element(traffic_light(yellow), SX, SY) & E = traf
     !reachSpeedLimit.
 
 /* When the car ahead is at normal safe distance — slow down */
-+!reachSpeedLimit : car(X, Y, S)
++!reachSpeedLimit : car(D, S)
                     & position(CX, CY)
                     & currentSpeed(CS)
                     & dynamic_safe_distance(CS, S, DSD)
                     & normal_safe_distance(S, NSD)
-                    & distance(CX, CY, X, Y, D)
                     & D >= DSD
                     & D <= NSD <-
     .print("Maintaining safe distance (", D, "m) behind car at (", X, ", ", Y, ") — NSD = ", NSD);
@@ -207,11 +205,10 @@ arrest_car_event(E, SX, SY) :- element(traffic_light(yellow), SX, SY) & E = traf
     !reachSpeedLimit.
 
 /* When the car ahead is far but not to far keep speed*/
-+!reachSpeedLimit : car(X, Y, S)
++!reachSpeedLimit : car(D, S)
                     & position(CX, CY)
                     & currentSpeed(CS)
                     & dynamic_safe_distance(CS, S, DSD)
-                    & distance(CX, CY, X, Y, D)
                     & D > DSD
                     & D <= NSD + 20 <-
     .print("Car ahead at (", X, ", ", Y, ") is far but not too far (", D, "m) — NSD = ", NSD);

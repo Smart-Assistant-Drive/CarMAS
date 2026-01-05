@@ -12,7 +12,7 @@ public class LiteralConverter {
     public static String SPEED_LIMIT_BASE = "speedLimit(LIMIT)";
     public static String SIGN_TYPE_BASE = "element(TYPE, X, Y)";
     public static String TRAFFIC_LIGHT_BASE = "element(traffic_light(STATE), X, Y)";
-    public static String OTHER_CAR_BASE = "car(X, Y, SPEED)";
+    public static String OTHER_CAR_BASE = "car(D, SPEED)";
 
     public static Literal positionToLiteral(Point p) {
         return Literal.parseLiteral(POSITION_BASE.replace("X", String.valueOf(p.getX()))
@@ -43,9 +43,8 @@ public class LiteralConverter {
                 .replace("Y", String.valueOf(tl.getPosition().getY())));
     }
 
-    public static Literal otherCarToLiteral(Car car) {
-        return Literal.parseLiteral(OTHER_CAR_BASE.replace("X", String.valueOf(car.getPosition().getX()))
-                .replace("Y", String.valueOf(car.getPosition().getY()))
+    public static Literal otherCarToLiteral(OtherCar car) {
+        return Literal.parseLiteral(OTHER_CAR_BASE.replace("D", String.valueOf(car.getDistance()))
                 .replace("SPEED", String.valueOf(car.getSpeed())));
     }
 }
