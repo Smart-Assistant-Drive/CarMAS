@@ -28,8 +28,8 @@ public class Movement {
         this.car = car;
         this.path = path;
 
-        currentSegment = path.getSegments().get(0);
-        currentFlow = currentSegment.getRoad();
+        currentSegment = path.getSegments().getFirst();
+        currentFlow = currentSegment.getFlow();
 
         int segIndex = Points.findContainingSegment(
                 currentFlow.getPath(), car.getPosition()
@@ -94,25 +94,66 @@ public class Movement {
     }
 
     private boolean advanceToNextPathSegment() {
+
+        // === SALVATAGGIO STATO REALE ===
+        PathSegment oldSegment = currentSegment;
+        Flow oldFlow = oldSegment.getFlow();
+        int oldPathIndex = pathIndex;
+
+        Point[] roadPath = currentFlow.getPath();
+        int lastIndexPassed = position.getSegmentIndex();
+
+        Point lastPassedPoint = roadPath[lastIndexPassed];
+        Point carPos = car.getPosition();
+
+        Vector distanceFromLastPassed = vector(lastPassedPoint, carPos);
+
+        // === AVANZAMENTO PATH ===
         pathIndex++;
         if (pathIndex >= path.getSegments().size()) {
+            notifyRoadChanged(
+                    oldFlow,
+                    null,
+                    null,
+                    oldPathIndex,
+                    distanceFromLastPassed
+            );
             return false;
         }
 
-        Flow oldFlow = currentFlow;
-
         currentSegment = path.getSegments().get(pathIndex);
-        currentFlow = currentSegment.getRoad();
-        position = new RoadPosition(0, 0);
-        car.setPosition(currentSegment.getStart());
+        Flow newFlow = currentSegment.getFlow();
 
-        notifyRoadChanged(oldFlow, currentFlow);
+        car.setPosition(currentSegment.getStart());
+        position = new RoadPosition(0, 0);
+
+        notifyRoadChanged(
+                oldFlow,
+                newFlow,
+                currentSegment,
+                oldPathIndex,
+                distanceFromLastPassed
+        );
+
         return true;
     }
 
-    private void notifyRoadChanged(Flow oldFlow, Flow newFlow) {
+    private void notifyRoadChanged(
+            Flow previousFlow,
+            Flow newFlow,
+            PathSegment newSegment,
+            int indexFlow,
+            Vector distance
+    ) {
         for (MovementListener l : listeners) {
-            l.onRoadChanged(oldFlow, newFlow, currentSegment);
+            l.onRoadChanged(
+                    previousFlow,
+                    newFlow,
+                    newSegment,
+                    car,
+                    indexFlow,
+                    distance
+            );
         }
     }
 }

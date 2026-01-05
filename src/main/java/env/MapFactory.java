@@ -22,9 +22,9 @@ public class MapFactory {
 
     private final RemoteRepository remoteRepository;
     private Path path = null;
-    private List<Flow> flows = new ArrayList<>();
-    private List<TrafficLight> trafficLights = new ArrayList<>();
-    private List<Sign> signs = new ArrayList<>();
+    private final List<Flow> flows = new ArrayList<>();
+    private final List<TrafficLight> trafficLights = new ArrayList<>();
+    private final List<Sign> signs = new ArrayList<>();
 
     public MapFactory(RemoteRepository remoteRepository) {
         this.remoteRepository = remoteRepository;
@@ -42,8 +42,10 @@ public class MapFactory {
                                 .stream()
                                 .filter(f -> f.getIdDirection() == segment.getDirection())
                                 .findFirst()
-                                .orElseThrow();;
+                                .orElseThrow();
                 Flow flow = new Flow(
+                        flowDto.getRoadId(),
+                        flowDto.getIdDirection(),
                         flowDto.getRoadCoordinates()
                         .stream()
                         .map(Mapper::mapCoordinateDtoToPoint)

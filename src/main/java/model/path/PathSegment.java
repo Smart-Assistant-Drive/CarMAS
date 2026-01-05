@@ -13,7 +13,7 @@ public class PathSegment {
         this.end = end;
     }
 
-    public Flow getRoad() {
+    public Flow getFlow() {
         return flow;
     }
 
