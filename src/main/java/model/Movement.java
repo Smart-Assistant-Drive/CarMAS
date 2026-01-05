@@ -13,16 +13,21 @@ import static model.math.Points.vector;
 
 public class Movement {
     private final Car car;
-    private Road road;
+    private final Path path;
+    private PathSegment currentSegment;
+    private Road currentRoad;
+    private int pathIndex = 0;
     private List<RoadElement> roadElements;
     private final List<Integer> roadElementsIndex;
     private int index = 0;
 
-    public Movement(Car car, Road road) {
+    public Movement(Car car, Path path) {
         this.car = car;
-        this.road = road;
-        Point[] path = road.getPath();
-        index = closestIndex(List.of(path), car.getPosition());
+        this.path = path;
+        this.currentSegment = path.getSegments().get(pathIndex);
+        this.currentRoad = this.currentSegment.getRoad();
+        Point[] pathPoint = currentRoad.getPath();
+        index = closestIndex(List.of(pathPoint), car.getPosition());
         this.roadElementsIndex = new ArrayList<>();
         this.roadElements = new ArrayList<>();
     }
@@ -57,7 +62,7 @@ public class Movement {
     public void setRoadElements(List<RoadElement> roadElements) {
         this.roadElements = roadElements;
         for (RoadElement p : roadElements) {
-            roadElementsIndex.add(closestIndex(List.of(road.getPath()), p.getPosition()));
+            roadElementsIndex.add(closestIndex(List.of(currentRoad.getPath()), p.getPosition()));
         }
     }
 
@@ -84,11 +89,20 @@ public class Movement {
     }
 
     public void move(double distance) {
-        Point[] path = road.getPath();
+        Point[] path = currentRoad.getPath();
         while (distance > 0 && index < path.length - 1) {
             Point currentPosition = car.getPosition();
             Point nextPoint = path[index + 1];
-            double segmentLength = Points.distance(currentPosition, nextPoint);
+            double segmentLength;
+            boolean changeSegment = false;
+            double segmentLengthToEnd = Points.distance(currentPosition, this.currentSegment.getEnd());
+            double segmentLengthToNext = Points.distance(currentPosition, nextPoint);
+            if (segmentLengthToEnd < segmentLengthToNext) {
+                segmentLength = segmentLengthToEnd;
+                changeSegment = true;
+            } else {
+                segmentLength = segmentLengthToNext;
+            }
 
             if (distance < segmentLength) {
                 Vector direction = vector(currentPosition, nextPoint).normalize();
@@ -100,12 +114,21 @@ public class Movement {
             } else {
                 car.setPosition(nextPoint);
                 distance -= segmentLength;
-                index++;
+                if (changeSegment) {
+                    pathIndex++;
+                    if (pathIndex < this.path.getSegments().size()) {
+                        this.currentSegment = this.path.getSegments().get(pathIndex);
+                        this.currentRoad = this.currentSegment.getRoad();
+                        path = currentRoad.getPath();
+                        index = 0;
+                    } else {
+                        // Reached the end of the path
+                        distance = 0;
+                    }
+                }else {
+                    index++;
+                }
             }
         }
-    }
-
-    public void setRoad(Road road) {
-        this.road = road;
     }
 }
