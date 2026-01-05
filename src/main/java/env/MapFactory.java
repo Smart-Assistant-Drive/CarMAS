@@ -89,7 +89,7 @@ public class MapFactory {
         return elements;
     }
 
-
-
-
+    public List<TrafficLight> getTrafficLights() {
+        return List.copyOf(trafficLights);
+    }
 }
