@@ -1,6 +1,7 @@
 package model;
 
 import model.math.Points;
+import model.math.Vector;
 import model.path.PathSegment;
 import model.path.Flow;
 import model.roadElement.RoadElement;
@@ -44,7 +45,10 @@ public class RoadsElementsVision implements MovementListener {
     public void onRoadChanged(
             Flow previousFlow,
             Flow newFlow,
-            PathSegment segment
+            PathSegment segment,
+            Car car,
+            int indexFlow,
+            Vector distance
     ) {
         this.currentFlow = newFlow;
     }
