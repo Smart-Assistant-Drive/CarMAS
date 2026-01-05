@@ -1,23 +1,51 @@
 package repository;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import model.Car;
+import model.CarUpdate;
+import model.OtherCar;
+import model.path.Flow;
 import model.roadElement.TrafficLight;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import repository.dto.car.CarUpdateMessage;
+import repository.dto.car.OtherCarMessage;
 import repository.dto.semaphore.TrafficLightMessage;
 import java.util.Objects;
 
+import static repository.Mapper.mapCarUpdateToCarUpdateMessage;
+import static repository.Mapper.mapOtherCarDtoToOtherCar;
+
 public class RemoteStream {
-    private static String trafficLightTopic(String id) {
+    private String trafficLightTopic(String id) {
         return "semaphore/" + id + "/change";
     }
-    //private static final String CAR_UPDATE_TOPIC = "trafficdt-digital-cars-digital-adapter/cars/carUpdate";
+    private String carUpdateTopic(String plate) {
+        return "trafficdt-digital-cars-digital-adapter/cars/"+plate+"/distanceFromNext";
+    }
+
+    private String trafficTDId(Flow flow) {
+        return "trafficdt-"+flow.getRoad()+"-"+flow.getDirection();
+    }
+
+    private String EnterRoadTopic(Flow flow) {
+        return "trafficdt-physical-"+trafficTDId(flow)+"/carEntered";
+    }
+
+    private String UpdateRoadTopic(Flow flow) {
+        return "trafficdt-physical-"+trafficTDId(flow)+"/carUpdate";
+    }
+
+    private String ExitRoadTopic(Flow flow) {
+        return "trafficdt-physical-"+trafficTDId(flow)+"/carExited";
+    }
 
     public interface TrafficLightStateListener {
         void onTrafficLightState(TrafficLight.State state);
     }
 
     public interface CarListener {
-        void onCar(Car car);
+        void onOtherCar(OtherCar car);
     }
 
     public void trafficLightStateStream(String id, MqttRepository mqttRepository, TrafficLightStateListener listener) {
@@ -37,26 +65,48 @@ public class RemoteStream {
         });
     }
 
-    public void sendMessage(String topic, String message, MqttRepository mqttRepository) {
-        mqttRepository.publish(new MqttEvent(topic, message));
-    }
-
-    /*public void carsStream(MqttRepository mqttRepository, CarListener listener) {
+    public void nextCarStream(MqttRepository mqttRepository, String plate, CarListener listener) throws MqttException {
+        mqttRepository.connectToTopic(carUpdateTopic(plate));
         mqttRepository.addEventListener(event -> {
-            if (Objects.equals(event.getTopic(), CAR_UPDATE_TOPIC)) {
+            if (Objects.equals(event.getTopic(), carUpdateTopic(plate))) {
                 try {
                     ObjectMapper mapper = mqttRepository.getMapper();
-                    CarUpdateMessage msg = mapper.readValue(event.getPayload(), CarUpdateMessage.class);
-                    Car car = new Car(
-                        msg.getIdCar(),
-                        new Point(msg.getPositionX(), msg.getPositionY()),
-                        msg.getCurrentSpeed(),
-                        new Vector(msg.getDPointX(), msg.getDPointY()).normalize(),
-                        msg.getIndexLane()
-                    );
-                    listener.onCar(car);
+                    OtherCarMessage otherCar = mapper.readValue(event.getMessage(), OtherCarMessage.class);
+                    listener.onOtherCar(mapOtherCarDtoToOtherCar(otherCar));
                 } catch (Exception ignored) {}
             }
         });
-    }*/
+    }
+
+    private void sendMessage(MqttRepository mqttRepository, MqttEvent event) {
+        mqttRepository.publish(event);
+    }
+
+    public void sendCarEnterRoad(MqttRepository mqttRepository, CarUpdate update) throws JsonProcessingException {
+        CarUpdateMessage msg = mapCarUpdateToCarUpdateMessage(update);
+        ObjectMapper mapper = mqttRepository.getMapper();
+        MqttEvent event = new MqttEvent(
+                EnterRoadTopic(update.getFlow()),
+                mapper.writeValueAsString(msg)
+        );
+        sendMessage(mqttRepository, event);
+    }
+
+    public void sendCarUpdate(MqttRepository mqttRepository, CarUpdate update) throws JsonProcessingException {
+        CarUpdateMessage msg = mapCarUpdateToCarUpdateMessage(update);
+        ObjectMapper mapper = mqttRepository.getMapper();
+        MqttEvent event = new MqttEvent(
+                UpdateRoadTopic(update.getFlow()),
+                mapper.writeValueAsString(msg)
+        );
+        sendMessage(mqttRepository, event);
+    }
+
+    public void sendCarExitRoad(MqttRepository mqttRepository, CarUpdate update) {
+        MqttEvent event = new MqttEvent(
+                ExitRoadTopic(update.getFlow()),
+                update.getCar().getPlate()
+        );
+        sendMessage(mqttRepository, event);
+    }
 }
