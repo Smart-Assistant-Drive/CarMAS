@@ -26,17 +26,11 @@ public class RemoteStream {
                 try {
                     ObjectMapper mapper = mqttRepository.getMapper();
                     TrafficLightMessage msg = mapper.readValue(event.getMessage(), TrafficLightMessage.class);
-                    TrafficLight.State state;
-                    switch (msg.getColor().toLowerCase()) {
-                        case "green":
-                            state = TrafficLight.State.GREEN;
-                            break;
-                        case "yellow":
-                            state = TrafficLight.State.YELLOW;
-                            break;
-                        default:
-                            state = TrafficLight.State.RED;
-                    }
+                    TrafficLight.State state = switch (msg.getColor().toLowerCase()) {
+                        case "green" -> TrafficLight.State.GREEN;
+                        case "yellow" -> TrafficLight.State.YELLOW;
+                        default -> TrafficLight.State.RED;
+                    };
                     listener.onTrafficLightState(state);
                 } catch (Exception ignored) {}
             }
