@@ -7,22 +7,26 @@ import jason.asSyntax.Structure;
 import jason.environment.Environment;
 import model.Car;
 import model.Movement;
+import model.OtherCar;
 import model.RoadsElementsVision;
 import model.math.Point;
 import model.path.Path;
 import model.roadElement.RoadElements;
 import model.roadElement.Sign;
 import model.roadElement.SpeedLimitSign;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import repository.MqttRepository;
 import repository.RemoteRepository;
+import repository.RemoteStream;
 
 import javax.swing.*;
-import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 import static model.LiteralConverter.*;
+import static utils.LicensePlateGenerator.randomPlate;
 
 public class CarEnvironment extends Environment {
 
@@ -32,13 +36,15 @@ public class CarEnvironment extends Environment {
     private Movement movement;
     private RoadsElementsVision roadsElementsVision;
 
-    private final Car car = new Car(new Point(0, 0), 0);
-    private final Optional<Car> otherCar = Optional.empty();
+    private final String plate =  randomPlate();
+    private final Car car = new Car(new Point(0, 0), 0, plate);
 
     private GUI gui;
-    private String licenseNumber = "";
+    //private String licenseNumber = "";
 
-    private RemoteRepository repository = new RemoteRepository();
+    private final RemoteRepository repository = new RemoteRepository();
+    private final RemoteStream remoteStream = new RemoteStream();
+    private MqttRepository mqttRepository = null;
 
     /* =========================
        ENV INITIALIZATION
@@ -47,6 +53,12 @@ public class CarEnvironment extends Environment {
     @Override
     public void init(String[] args) {
         logger.info("Initializing environment...");
+        try {
+            mqttRepository = new MqttRepository(logger::warning);
+        } catch (MqttException e) {
+            logger.severe("Failed to connect to MQTT broker: " + e.getMessage());
+            throw new RuntimeException(e);
+        }
 
         initGUI();
         initModel();
@@ -62,7 +74,7 @@ public class CarEnvironment extends Environment {
 
             @Override
             public void onInsertLicense(String license) {
-                env.licenseNumber = license;
+                //env.licenseNumber = license;
             }
 
             @Override
@@ -99,20 +111,44 @@ public class CarEnvironment extends Environment {
     }
 
     private void initModel() {
-        MapFactory builder = new MapFactory(repository);
+        MapFactory factory = new MapFactory(repository);
         try{
-            builder.buildMap();
+            factory.buildMap();
         } catch (RuntimeException e){
             logger.severe("Failed to build map: " + e.getMessage());
             throw e;
         }
-        Path path = builder.getPath();
+        Path path = factory.getPath();
         car.setPosition(
                 path.getSegments().getFirst().getStart()
         );
         movement = new Movement(car, path);
-        roadsElementsVision = new RoadsElementsVision(builder.getRoadElements());
+        roadsElementsVision = new RoadsElementsVision(factory.getRoadElements());
         movement.addListener(roadsElementsVision);
+        factory.getTrafficLights().forEach(
+                t ->
+                        remoteStream.trafficLightStateStream(
+                                "",
+                                mqttRepository,
+                                t::setState
+                        )
+        );
+        try {
+            remoteStream.nextCarStream(
+                    mqttRepository,
+                    car.getPlate(),
+                    this::updateOtherCarPercept
+            );
+        }
+        catch (MqttException e){
+            logger.severe("Failed to initialize other car stream: " + e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void updateOtherCarPercept(OtherCar car) {
+        removePerceptsByUnif(Literal.parseLiteral(OTHER_CAR_BASE));
+        addPercept(otherCarToLiteral(car));
     }
 
     private void initPercepts() {
@@ -131,7 +167,6 @@ public class CarEnvironment extends Environment {
         updateSpeedPercept();
         updateSpeedLimitPercept();
         updateSignalsPercepts();
-        updateOtherCarPercept();
         updateGUIInfo();
     }
 
@@ -172,10 +207,6 @@ public class CarEnvironment extends Environment {
         RoadElements.getNextTrafficLight(
                 roadsElementsVision.getNextRoadElements()
         ).ifPresent(t -> addPercept(trafficLightToLiteral(t)));
-    }
-
-    private void updateOtherCarPercept() {
-        otherCar.ifPresent(c -> addPercept(otherCarToLiteral(c)));
     }
 
     private void updateGUIInfo() {
