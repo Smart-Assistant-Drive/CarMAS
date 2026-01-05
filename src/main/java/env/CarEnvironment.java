@@ -7,17 +7,18 @@ import jason.asSyntax.Structure;
 import jason.environment.Environment;
 import model.Car;
 import model.Movement;
-import model.roadElement.RoadElement;
+import model.RoadsElementsVision;
+import model.math.Point;
+import model.path.Path;
 import model.roadElement.RoadElements;
 import model.roadElement.Sign;
-import model.math.Point;
-import model.Road;
 import model.roadElement.SpeedLimitSign;
+import repository.RemoteRepository;
 
 import javax.swing.*;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
@@ -25,35 +26,53 @@ import static model.LiteralConverter.*;
 
 public class CarEnvironment extends Environment {
 
-    static Logger logger = Logger.getLogger(CarEnvironment.class.getName());
+    private static final Logger logger =
+            Logger.getLogger(CarEnvironment.class.getName());
 
     private Movement movement;
-    private String licenseNumber = "";
+    private RoadsElementsVision roadsElementsVision;
+
     private final Car car = new Car(new Point(0, 0), 0);
-    private final Optional<Car> otherCar = //Optional.of(new Car(new Point(10_000, 10_000), 0));
-            Optional.empty();
-    private GUI gui = null;
+    private final Optional<Car> otherCar = Optional.empty();
+
+    private GUI gui;
+    private String licenseNumber = "";
+
+    private RemoteRepository repository = new RemoteRepository();
+
+    /* =========================
+       ENV INITIALIZATION
+       ========================= */
 
     @Override
-    public void init(final String[] args) {
+    public void init(String[] args) {
         logger.info("Initializing environment...");
+
+        initGUI();
+        initModel();
+        initPercepts();
+
+        logger.info("Environment ready.");
+    }
+
+    private void initGUI() {
         CarEnvironment env = this;
+
         gui = new GUI(new GUIEventInterface() {
+
             @Override
-            public void onInsertLicense(String licenseNumber) {
-                env.licenseNumber = licenseNumber;
+            public void onInsertLicense(String license) {
+                env.licenseNumber = license;
             }
 
             @Override
             public void onStartCar() {
-                logger.info("Car started with license: " + env.licenseNumber);
                 removePercept(Literal.parseLiteral("car_stopped"));
                 addPercept(Literal.parseLiteral("car_started"));
             }
 
             @Override
             public void onStopCar() {
-                logger.info("Car stopped.");
                 removePercept(Literal.parseLiteral("car_started"));
                 addPercept(Literal.parseLiteral("car_stopped"));
             }
@@ -62,194 +81,177 @@ public class CarEnvironment extends Environment {
             public void onSpeedChange(double newSpeed) {
                 car.setSpeed(newSpeed);
                 updatePercepts();
-                logger.info("Car speed changed to: " + newSpeed);
             }
 
             @Override
-            public void onToggleAutonomousModeChange(boolean isAutonomous) {
-                if (isAutonomous) {
-                    logger.info("Autonomous mode enabled.");
+            public void onToggleAutonomousModeChange(boolean auto) {
+                if (auto) {
                     removePercept(Literal.parseLiteral("driver_mode"));
                     addPercept(Literal.parseLiteral("autonomous_mode"));
                 } else {
-                    logger.info("Manual mode enabled.");
                     removePercept(Literal.parseLiteral("autonomous_mode"));
                     addPercept(Literal.parseLiteral("driver_mode"));
                 }
-
             }
         });
+
         SwingUtilities.invokeLater(() -> gui.setVisible(true));
-
-        movement = new Movement(
-                car,
-                new Road(new Point[]{
-                        new Point(0, 0),
-                        new Point(200, 0),
-                        new Point(200, 200),
-                        new Point(0, 200)
-                })
-        );
-        movement.setRoadElements(
-                Stream.of(
-                        new Point(200, 0)
-                ).map(
-                        p -> (RoadElement) new Sign(p, 0, Sign.SignType.STOP)
-                ).toList()
-        );
-        var speedLimit = speedLimitToLiteral(
-                RoadElements.getLastSpeedLimitSign(
-                                movement.getPassedStreetElements()
-                        )
-                        .map(SpeedLimitSign::getSpeedLimit)
-                        .orElse(60)
-        );
-        addPercept(
-                speedLimit
-        );
-        logger.info("speed limit added: " + speedLimit);
-        var currentSpeed = currentSpeedToLiteral(car.getSpeed());
-        addPercept(currentSpeed);
-        logger.info("current speed added: " + currentSpeed);
-        addPercept(positionToLiteral(car.getPosition()));
-        logger.info("position added");
-
-        otherCar.ifPresent(value -> {
-            var otherCarLiteral = otherCarToLiteral(value);
-            addPercept(otherCarLiteral);
-        });
-        logger.info("other car added: " + otherCar);
-
-        logger.info("Finished environment...");
     }
 
+    private void initModel() {
+        MapFactory builder = new MapFactory(repository);
+        try{
+            builder.buildMap();
+        } catch (RuntimeException e){
+            logger.severe("Failed to build map: " + e.getMessage());
+            throw e;
+        }
+        Path path = builder.getPath();
+        car.setPosition(
+                path.getSegments().getFirst().getStart()
+        );
+        movement = new Movement(car, path);
+        roadsElementsVision = new RoadsElementsVision(builder.getRoadElements());
+        movement.addListener(roadsElementsVision);
+    }
+
+    private void initPercepts() {
+        addPercept(Literal.parseLiteral("car_stopped"));
+        addPercept(currentSpeedToLiteral(car.getSpeed()));
+        addPercept(positionToLiteral(car.getPosition()));
+        addSpeedLimitPercept();
+    }
+
+    /* =========================
+       PERCEPTS UPDATE
+       ========================= */
+
     private void updatePercepts() {
-        //clearPercepts();
-        List<Literal> actualPercepts = new ArrayList<>();
-        final Point pos = car.getPosition();
-        logger.info(String.format("Current position: (%.2f, %.2f)", pos.getX(), pos.getY()));
+        updatePositionPercept();
+        updateSpeedPercept();
+        updateSpeedLimitPercept();
+        updateSignalsPercepts();
+        updateOtherCarPercept();
+        updateGUIInfo();
+    }
+
+    private void updatePositionPercept() {
         removePerceptsByUnif(Literal.parseLiteral(POSITION_BASE));
-        //removePercept();
-        addPercept(positionToLiteral(pos));
-        //removePerceptsByUnif(Literal.parseLiteral("next_street_element(X, Y)"));
-        /*
-        movement.getNextStreetElements().forEach(
-                p -> addPercept(Literal.parseLiteral(String.format("next_street_element(%.2f, %.2f)", p.getPosition().getX(), p.getPosition().getY())))
-        );*/
+        addPercept(positionToLiteral(car.getPosition()));
+    }
+
+    private void updateSpeedPercept() {
         removePerceptsByUnif(Literal.parseLiteral(CURRENT_SPEED_BASE));
         addPercept(currentSpeedToLiteral(car.getSpeed()));
         gui.changeSpeed(car.getSpeed());
-        removePerceptsByUnif(Literal.parseLiteral(SPEED_LIMIT_BASE));
-        var speedLimitLiteral = speedLimitToLiteral(
-                RoadElements.getLastSpeedLimitSign(
-                                movement.getPassedStreetElements()
-                        )
-                        .map(SpeedLimitSign::getSpeedLimit)
-                        .orElse(60)
-        );
-        actualPercepts.add(speedLimitLiteral);
-        addPercept(speedLimitLiteral);
-        removePerceptsByUnif(signTypeToLiteral(Sign.SignType.STOP));
-        RoadElements.getNextStopSign(movement.getNextStreetElements())
-                .ifPresent(s -> {
-                    var signLiteral = signToLiteral(s);
-                    actualPercepts.add(signLiteral);
-                    addPercept(signLiteral);
-                });
-        RoadElements.getNextTrafficLight(movement.getNextStreetElements())
-                .ifPresent(s -> {
-                    var trafficLightLiteral = trafficLightToLiteral(s);
-                    actualPercepts.add(trafficLightLiteral);
-                    addPercept(trafficLightLiteral);
-                });
-
-
-        otherCar.ifPresent(value -> {
-            var otherCarLiteral = otherCarToLiteral(value);
-            actualPercepts.add(otherCarLiteral);
-            addPercept(otherCarLiteral);
-        });
-
-        var info = actualPercepts.stream().map(Literal::toString).reduce("", (a, b) -> a + b + "\n");
-        gui.changeInfo(info);
-
-        logger.info(String.format("Current speed: %.2f", car.getSpeed()));
-
     }
 
-    /*
+    private void updateSpeedLimitPercept() {
+        removePerceptsByUnif(Literal.parseLiteral(SPEED_LIMIT_BASE));
+        addSpeedLimitPercept();
+    }
+
+    private void addSpeedLimitPercept() {
+        int speedLimit =
+                RoadElements.getLastSpeedLimitSign(
+                                roadsElementsVision.getPassedRoadElements()
+                        ).map(SpeedLimitSign::getSpeedLimit)
+                        .orElse(60);
+
+        addPercept(speedLimitToLiteral(speedLimit));
+    }
+
+    private void updateSignalsPercepts() {
+
+        removePerceptsByUnif(signTypeToLiteral(Sign.SignType.STOP));
+
+        RoadElements.getNextStopSign(
+                roadsElementsVision.getNextRoadElements()
+        ).ifPresent(s -> addPercept(signToLiteral(s)));
+
+        RoadElements.getNextTrafficLight(
+                roadsElementsVision.getNextRoadElements()
+        ).ifPresent(t -> addPercept(trafficLightToLiteral(t)));
+    }
+
+    private void updateOtherCarPercept() {
+        otherCar.ifPresent(c -> addPercept(otherCarToLiteral(c)));
+    }
+
+    private void updateGUIInfo() {
+        String info =
+                Stream.concat(
+                                roadsElementsVision.getNextRoadElements().stream(),
+                                roadsElementsVision.getPassedRoadElements().stream()
+                        )
+                        .map(Object::toString)
+                        .reduce("", (a, b) -> a + b + "\n");
+
+        gui.changeInfo(info);
+    }
+
+    /* =========================
+       ACTION EXECUTION
+       ========================= */
+
     @Override
-    public Collection<Literal> getPercepts(String agName) {
-        final Point pos = movement.getCurrentPosition();
-        logger.info(String.format("Current position: (%.2f, %.2f)", pos.getX(), pos.getY()));
-        return Collections.singletonList(
-                Literal.parseLiteral(String.format("position(%.2f, %.2f)", pos.getX(), pos.getY()))
-        );
-    }*/
+    public boolean executeAction(String ag, Structure action) {
+        logger.info(ag + " executes " + action);
 
-    //private static final double FAILURE_PROBABILITY = 0.2;
+        double speed = car.getSpeed();
 
-    @Override
-    public boolean executeAction(final String ag, final Structure action) {
-        logger.info(ag + " is doing: " + action);
-        try {
-            double mySpeed = car.getSpeed();
-            switch (action.getFunctor()) {
-                case "accelerate":
-                    double speedIncrease = 10;//((NumberTerm) action.getTerm(0)).solve();
-                    mySpeed += speedIncrease;
-                    car.setSpeed(mySpeed);
-                    break;
+        switch (action.getFunctor()) {
 
-                case "brake":
-                    double speedDecrease = 5;//((NumberTerm) action.getTerm(0)).solve();
-                    mySpeed -= speedDecrease;
-                    if (mySpeed < 0) mySpeed = 0;
-                    car.setSpeed(mySpeed);
-                    break;
+            case "accelerate":
+                car.setSpeed(speed + 10);
+                break;
 
-                case "keep_speed":
-                    // cruise control: do nothing
-                    break;
+            case "brake":
+                car.setSpeed(Math.max(0, speed - 5));
+                break;
 
-                case "do_nothing":
-                    // natural drag/friction
-                    mySpeed -= 0.5;
-                    if (mySpeed < 0) mySpeed = 0;
-                    car.setSpeed(mySpeed);
-                    break;
-                case "move":
-                    double distance = mySpeed * 0.5; // simple discrete timestep
-                    movement.move(distance);
-                    break;
-                case "passedStop":
-                    logger.info(ag + " is passed: " + action);
-                    RoadElements.getNextStopSign(movement.getNextStreetElements())
-                            .ifPresent(Sign::useSignal);
-                    new Thread(
-                            () -> {
-                                try {
-                                    Thread.sleep(2000);
-                                    addPercept(Literal.parseLiteral("restart"));
-                                } catch (InterruptedException e) {
-                                    throw new RuntimeException(e);
-                                }
-                            }
-                    );
-                default:
-                    logger.warning("Unknown action " + action);
-                    return false;
-            }
+            case "keep_speed":
+                break;
 
-            // simulate movement
-            //myPos += mySpeed * 0.5; // simple discrete timestep
+            case "do_nothing":
+                car.setSpeed(Math.max(0, speed - 0.5));
+                break;
 
-            // update percepts for next cycle
-            updatePercepts();
-        } catch (Exception e) {
-            logger.warning("Error executing action: " + e.getMessage());
-            //e.printStackTrace();
+            case "move":
+                movement.move(car.getSpeed() * 0.5);
+                roadsElementsVision.update(movement.getPosition());
+                break;
+
+            case "passedStop":
+                handlePassedStop();
+                break;
+
+            default:
+                logger.warning("Unknown action: " + action);
+                return false;
         }
+
+        updatePercepts();
         return true;
+    }
+
+    /* =========================
+       STOP HANDLING
+       ========================= */
+
+    private void handlePassedStop() {
+
+        RoadElements.getNextStopSign(
+                roadsElementsVision.getNextRoadElements()
+        ).ifPresent(Sign::useSignal);
+
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                addPercept(Literal.parseLiteral("restart"));
+                timer.cancel();
+            }
+        }, 2000);
     }
 }
