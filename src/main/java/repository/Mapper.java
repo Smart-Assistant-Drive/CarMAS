@@ -1,11 +1,15 @@
 package repository;
 
+import model.CarUpdate;
+import model.OtherCar;
 import model.math.Point;
 import model.path.Flow;
 import model.path.PathSegment;
 import model.roadElement.Sign;
 import model.roadElement.SpeedLimitSign;
 import model.roadElement.TrafficLight;
+import repository.dto.car.CarUpdateMessage;
+import repository.dto.car.OtherCarMessage;
 import repository.dto.path.PathSegmentDto;
 import repository.dto.semaphore.SemaphoreDto;
 import repository.dto.sign.SignResponseDto;
@@ -72,6 +76,31 @@ public class Mapper {
         return new TrafficLight(
                 mapCoordinateDtoToPoint(semaphoreDto.getPositionDto()),
                 flow
+        );
+    }
+
+    public static OtherCar mapOtherCarDtoToOtherCar(
+            OtherCarMessage otherCarMessage
+    ) {
+        return new OtherCar(
+                otherCarMessage.getSpeed(),
+                otherCarMessage.getDistance()
+        );
+    }
+
+    public static CarUpdateMessage mapCarUpdateToCarUpdateMessage(
+            CarUpdate update
+    ) {
+        return new CarUpdateMessage(
+                update.getCar().getPlate(),
+                update.getCar().getSpeed(),
+                0,
+                "RUNNING",
+                update.getCar().getPosition().getX(),
+                update.getCar().getPosition().getY(),
+                update.getIndexFlow(),
+                update.getDistance().getX(),
+                update.getDistance().getY()
         );
     }
 
