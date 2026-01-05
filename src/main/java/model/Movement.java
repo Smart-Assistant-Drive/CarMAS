@@ -3,8 +3,9 @@ package model;
 import model.math.Point;
 import model.math.Points;
 import model.math.Vector;
-import model.math.Vectors;
-import model.roadElement.RoadElement;
+import model.path.Path;
+import model.path.PathSegment;
+import model.path.Flow;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,123 +13,106 @@ import java.util.List;
 import static model.math.Points.vector;
 
 public class Movement {
+
     private final Car car;
     private final Path path;
-    private PathSegment currentSegment;
-    private Road currentRoad;
+
     private int pathIndex = 0;
-    private List<RoadElement> roadElements;
-    private final List<Integer> roadElementsIndex;
-    private int index = 0;
+    private PathSegment currentSegment;
+    private Flow currentFlow;
+    private RoadPosition position;
+
+    private final List<MovementListener> listeners = new ArrayList<>();
 
     public Movement(Car car, Path path) {
         this.car = car;
         this.path = path;
-        this.currentSegment = path.getSegments().get(pathIndex);
-        this.currentRoad = this.currentSegment.getRoad();
-        Point[] pathPoint = currentRoad.getPath();
-        index = closestIndex(List.of(pathPoint), car.getPosition());
-        this.roadElementsIndex = new ArrayList<>();
-        this.roadElements = new ArrayList<>();
+
+        currentSegment = path.getSegments().get(0);
+        currentFlow = currentSegment.getRoad();
+
+        int segIndex = Points.findContainingSegment(
+                currentFlow.getPath(), car.getPosition()
+        );
+
+        position = new RoadPosition(segIndex, 0);
     }
 
-    private static int closestIndex(List<Point> points, Point p) {
-        for (int i = 0; i < points.size() - 1; i++) {
-            Point a = points.get(i);
-            Point b = points.get(i + 1);
-
-            Vector ab = vector(a, b);
-            Vector ap = vector(a, p);
-
-            double abLen2 = ab.lengthSquared();
-            double t = abLen2 != 0 ? Vectors.dot(ab, ap) / abLen2 : 0;
-
-            if (t >= 0 && t < 1) {
-                // P proietta dentro al segmento
-                return i;
-            } else if (t < 0) {
-                // P sta prima del segmento
-                return i;
-            }
-        }
-        // Se P è oltre tutti i segmenti
-        return points.size() - 1;
+    public void addListener(MovementListener listener) {
+        listeners.add(listener);
     }
 
-    /*public Point getCurrentPosition() {
-        return currentPosition;
-    }*/
-
-    public void setRoadElements(List<RoadElement> roadElements) {
-        this.roadElements = roadElements;
-        for (RoadElement p : roadElements) {
-            roadElementsIndex.add(closestIndex(List.of(currentRoad.getPath()), p.getPosition()));
-        }
+    public Flow getCurrentRoad() {
+        return currentFlow;
     }
 
-    public List<RoadElement> getRoadElements() {
-        return roadElements;
-    }
-
-    public List<RoadElement> getPassedStreetElements() {
-        for (int i = 0; i < roadElementsIndex.size(); i++) {
-            if (roadElementsIndex.get(i) > index) {
-                return roadElements.subList(0, i);
-            }
-        }
-        return roadElements;
-    }
-
-    public List<RoadElement> getNextStreetElements() {
-        for (int i = 0; i < roadElementsIndex.size(); i++) {
-            if (roadElementsIndex.get(i) > index) {
-                return roadElements.subList(i, roadElements.size());
-            }
-        }
-        return List.of();
+    public RoadPosition getPosition() {
+        return position;
     }
 
     public void move(double distance) {
-        Point[] path = currentRoad.getPath();
-        while (distance > 0 && index < path.length - 1) {
-            Point currentPosition = car.getPosition();
-            Point nextPoint = path[index + 1];
-            double segmentLength;
-            boolean changeSegment = false;
-            double segmentLengthToEnd = Points.distance(currentPosition, this.currentSegment.getEnd());
-            double segmentLengthToNext = Points.distance(currentPosition, nextPoint);
-            if (segmentLengthToEnd < segmentLengthToNext) {
-                segmentLength = segmentLengthToEnd;
-                changeSegment = true;
-            } else {
-                segmentLength = segmentLengthToNext;
+        while (distance > 0) {
+
+            Point[] pts = currentFlow.getPath();
+
+            // fine road → prossimo PathSegment
+            if (position.getSegmentIndex() >= pts.length - 1) {
+                if (!advanceToNextPathSegment()) return;
+                continue;
             }
 
-            if (distance < segmentLength) {
-                Vector direction = vector(currentPosition, nextPoint).normalize();
-                car.setPosition(new Point(
-                        currentPosition.getX() + direction.getX() * distance,
-                        currentPosition.getY() + direction.getY() * distance
-                ));
-                distance = 0;
-            } else {
-                car.setPosition(nextPoint);
-                distance -= segmentLength;
-                if (changeSegment) {
-                    pathIndex++;
-                    if (pathIndex < this.path.getSegments().size()) {
-                        this.currentSegment = this.path.getSegments().get(pathIndex);
-                        this.currentRoad = this.currentSegment.getRoad();
-                        path = currentRoad.getPath();
-                        index = 0;
-                    } else {
-                        // Reached the end of the path
-                        distance = 0;
-                    }
-                }else {
-                    index++;
-                }
+            Point a = pts[position.getSegmentIndex()];
+            Point b = pts[position.getSegmentIndex() + 1];
+
+            double segmentLength = Points.distance(a, b);
+            double remaining = segmentLength - position.getOffset();
+
+            double step = Math.min(distance, remaining);
+
+            Vector dir = vector(a, b).normalize();
+            car.setPosition(new Point(
+                    car.getPosition().getX() + dir.getX() * step,
+                    car.getPosition().getY() + dir.getY() * step
+            ));
+
+            position.advance(step);
+            distance -= step;
+
+            if (position.getOffset() >= segmentLength - 1e-9) {
+                position.nextSegment();
             }
+
+            double distToEnd = Points.distance(
+                    car.getPosition(),
+                    currentSegment.getEnd()
+            );
+
+            if (distToEnd < 1e-6) {
+                advanceToNextPathSegment();
+            }
+        }
+    }
+
+    private boolean advanceToNextPathSegment() {
+        pathIndex++;
+        if (pathIndex >= path.getSegments().size()) {
+            return false;
+        }
+
+        Flow oldFlow = currentFlow;
+
+        currentSegment = path.getSegments().get(pathIndex);
+        currentFlow = currentSegment.getRoad();
+        position = new RoadPosition(0, 0);
+        car.setPosition(currentSegment.getStart());
+
+        notifyRoadChanged(oldFlow, currentFlow);
+        return true;
+    }
+
+    private void notifyRoadChanged(Flow oldFlow, Flow newFlow) {
+        for (MovementListener l : listeners) {
+            l.onRoadChanged(oldFlow, newFlow, currentSegment);
         }
     }
 }

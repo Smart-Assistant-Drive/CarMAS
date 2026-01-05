@@ -15,4 +15,20 @@ public class Points {
     public static Vector vector(Point from, Point to) {
         return new Vector(to.getX() - from.getX(), to.getY() - from.getY());
     }
+
+    public static int findContainingSegment(Point[] points, Point p) {
+        for (int i = 0; i < points.length - 1; i++) {
+            Vector ab = vector(points[i], points[i + 1]);
+            Vector ap = vector(points[i], p);
+
+            double t = ab.lengthSquared() > 0
+                    ? model.math.Vectors.dot(ab, ap) / ab.lengthSquared()
+                    : 0;
+
+            if (t >= 0 && t <= 1) {
+                return i;
+            }
+        }
+        return points.length - 2;
+    }
 }
