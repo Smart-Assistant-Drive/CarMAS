@@ -1,10 +1,11 @@
 package model.roadElement;
 
 import model.math.Point;
+import model.path.Flow;
 
 public interface RoadElement {
 
-    int getStreetId();
+    Flow getRoad();
 
     Point getPosition();
 }

@@ -1,6 +1,7 @@
 package model.roadElement;
 
 import model.math.Point;
+import model.path.Flow;
 
 public class Sign implements RoadElement  {
 
@@ -11,13 +12,13 @@ public class Sign implements RoadElement  {
     }
 
     private final Point position;
-    private final int streetId; // Identifier for the street this sign belongs to
+    private final Flow flow; // Identifier for the street this sign belongs to
     private final SignType type; // Type of sign (e.g., "STOP", "YIELD", "SPEED_LIMIT")
     private boolean used = false;
 
-    public Sign(Point position, int streetId, SignType type) {
+    public Sign(Point position, Flow flow, SignType type) {
         this.position = position;
-        this.streetId = streetId;
+        this.flow = flow;
         this.type = type;
     }
 
@@ -25,8 +26,8 @@ public class Sign implements RoadElement  {
         return position;
     }
 
-    public int getStreetId() {
-        return streetId;
+    public Flow getRoad() {
+        return flow;
     }
 
     public SignType getType() {

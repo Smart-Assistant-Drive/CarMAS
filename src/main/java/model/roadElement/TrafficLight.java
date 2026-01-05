@@ -1,6 +1,7 @@
 package model.roadElement;
 
 import model.math.Point;
+import model.path.Flow;
 
 public class TrafficLight implements RoadElement {
 
@@ -12,10 +13,10 @@ public class TrafficLight implements RoadElement {
 
     private State state;
     private final Point position;
-    private final int streetId; // Identifier for the street this semaphore belongs to
+    private final Flow flow; // Identifier for the street this semaphore belongs to
 
-    public TrafficLight(Point position , int streetId) {
-        this.streetId = streetId;
+    public TrafficLight(Point position , Flow flow) {
+        this.flow = flow;
         this.position = position;
         this.state = State.RED; // Default state
     }
@@ -32,7 +33,7 @@ public class TrafficLight implements RoadElement {
         return position;
     }
 
-    public int getStreetId() {
-        return streetId;
+    public Flow getRoad() {
+        return flow;
     }
 }
