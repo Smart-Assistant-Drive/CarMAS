@@ -1,4 +1,4 @@
-package model;
+package model.path;
 
 import java.util.List;
 
@@ -10,6 +10,6 @@ public class Path {
     }
 
     public List<PathSegment> getSegments() {
-        return segments;
+        return List.copyOf(segments);
     }
 }

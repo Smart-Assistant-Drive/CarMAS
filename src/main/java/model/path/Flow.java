@@ -1,12 +1,12 @@
-package model;
+package model.path;
 
 import model.math.Point;
 
-public class Road {
+public class Flow {
 
     private final Point[] path;
 
-    public Road(Point[] path) {
+    public Flow(Point[] path) {
         this.path = path;
     }
 
