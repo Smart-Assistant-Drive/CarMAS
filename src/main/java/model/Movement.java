@@ -36,18 +36,15 @@ public class Movement {
         );
 
         position = new RoadPosition(segIndex, 0);
+        Vector initialDistance = vector(
+                currentFlow.getPath()[segIndex],
+                car.getPosition()
+        );
+        notifyRoadChanged(null, currentFlow, currentSegment, pathIndex, initialDistance);
     }
 
     public void addListener(MovementListener listener) {
         listeners.add(listener);
-    }
-
-    public Flow getCurrentRoad() {
-        return currentFlow;
-    }
-
-    public RoadPosition getPosition() {
-        return position;
     }
 
     public void move(double distance) {
@@ -87,8 +84,24 @@ public class Movement {
                     currentSegment.getEnd()
             );
 
+            boolean roadChanged = false;
+
             if (distToEnd < 1e-6) {
-                advanceToNextPathSegment();
+                roadChanged = advanceToNextPathSegment();
+            }
+
+
+            Point[] roadPath = currentFlow.getPath();
+            int lastIndexPassed = position.getSegmentIndex();
+            Point lastPassedPoint = roadPath[lastIndexPassed];
+
+            Vector distanceFromLastPassed = vector(
+                    lastPassedPoint,
+                    car.getPosition()
+            );
+
+            if (!roadChanged) {
+                notifyMovementUpdated(distanceFromLastPassed);
             }
         }
     }
@@ -123,6 +136,7 @@ public class Movement {
 
         currentSegment = path.getSegments().get(pathIndex);
         Flow newFlow = currentSegment.getFlow();
+        currentFlow = newFlow;
 
         car.setPosition(currentSegment.getStart());
         position = new RoadPosition(0, 0);
@@ -153,6 +167,18 @@ public class Movement {
                     car,
                     indexFlow,
                     distance
+            );
+        }
+    }
+
+    private void notifyMovementUpdated(Vector distanceFromLastPassed) {
+        for (MovementListener l : listeners) {
+            l.onMovementUpdated(
+                    currentFlow,
+                    car,
+                    position,
+                    pathIndex,
+                    distanceFromLastPassed
             );
         }
     }
