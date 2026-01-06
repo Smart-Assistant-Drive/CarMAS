@@ -15,6 +15,7 @@ import model.roadElement.RoadElements;
 import model.roadElement.Sign;
 import model.roadElement.SpeedLimitSign;
 import org.eclipse.paho.client.mqttv3.MqttException;
+import repository.MovementListenerMqtt;
 import repository.MqttRepository;
 import repository.RemoteRepository;
 import repository.RemoteStream;
@@ -68,7 +69,7 @@ public class CarEnvironment extends Environment {
     }
 
     private void initGUI() {
-        CarEnvironment env = this;
+        //CarEnvironment env = this;
 
         gui = new GUI(new GUIEventInterface() {
 
@@ -144,6 +145,9 @@ public class CarEnvironment extends Environment {
             logger.severe("Failed to initialize other car stream: " + e.getMessage());
             throw new RuntimeException(e);
         }
+        MovementListenerMqtt movementListenerMqtt =
+                new MovementListenerMqtt(remoteStream, mqttRepository);
+        movement.addListener(movementListenerMqtt);
     }
 
     private void updateOtherCarPercept(OtherCar car) {
@@ -250,7 +254,7 @@ public class CarEnvironment extends Environment {
 
             case "move":
                 movement.move(car.getSpeed() * 0.5);
-                roadsElementsVision.update(movement.getPosition());
+                //roadsElementsVision.update(movement.getPosition());
                 break;
 
             case "passedStop":
