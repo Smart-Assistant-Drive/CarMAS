@@ -51,9 +51,22 @@ public class RoadsElementsVision implements MovementListener {
             Vector distance
     ) {
         this.currentFlow = newFlow;
+
+        if (newFlow != null) {
+            update(new RoadPosition(0, 0));
+        } else {
+            nextElements.clear();
+            passedElements.clear();
+        }
     }
 
-    public void update(RoadPosition carPos) {
+    @Override
+    public void onMovementUpdated(Flow flow, Car car, RoadPosition carPos, int indexFlow, Vector distance) {
+        if (flow != currentFlow) return;
+        update(carPos);
+    }
+
+    private void update(RoadPosition carPos) {
         nextElements.clear();
         passedElements.clear();
 

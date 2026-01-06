@@ -1,7 +1,5 @@
 package model;
 
-import model.math.Point;
-
 public class RoadPosition {
     private int segmentIndex;     // indice del segmento nella polyline
     private double offset;        // distanza percorsa nel segmento
