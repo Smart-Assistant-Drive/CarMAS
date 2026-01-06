@@ -14,4 +14,12 @@ public interface MovementListener {
             int indexFlow,
             Vector distance
     );
+
+    void onMovementUpdated(
+            Flow flow,
+            Car car,
+            RoadPosition carPos,
+            int indexFlow,
+            Vector distance
+    );
 }
