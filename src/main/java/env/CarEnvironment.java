@@ -150,6 +150,28 @@ public class CarEnvironment extends Environment {
         MovementListenerMqtt movementListenerMqtt =
                 new MovementListenerMqtt(remoteStream, mqttRepository);
         movement.addListener(movementListenerMqtt);
+        try {
+            remoteStream.sendCarEnterRoad(
+                    mqttRepository,
+                    new CarUpdate(
+                            car,
+                            movement.getCurrentFlow(),
+                            movement.getPosition().getSegmentIndex(),
+                            movement.getDistanceAsVector()
+                    )
+            );
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error sending car ENTER road", e);
+        }
+        roadsElementsVision.onRoadChanged(
+                null,
+                movement.getCurrentFlow(),
+                path.getSegments().getFirst(),
+                movement.getPosition(),
+                car,
+                0,
+                movement.getDistanceAsVector()
+        );
     }
 
     private void updateOtherCarPercept(OtherCar car) {
