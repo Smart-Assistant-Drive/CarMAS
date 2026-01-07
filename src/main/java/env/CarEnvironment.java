@@ -22,7 +22,6 @@ import javax.swing.*;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.logging.Logger;
-import java.util.stream.Stream;
 
 import static model.LiteralConverter.*;
 import static utils.LicensePlateGenerator.randomPlate;
@@ -173,9 +172,9 @@ public class CarEnvironment extends Environment {
     private void updatePercepts() {
         updatePositionPercept();
         updateSpeedPercept();
-        updateSpeedLimitPercept();
-        updateSignalsPercepts();
-        updateGUIInfo();
+        var speedLimit = updateSpeedLimitPercept();
+        var signals = updateSignalsPercepts();
+        updateGUIInfo(speedLimit + signals);
     }
 
     private void updatePositionPercept() {
@@ -190,43 +189,47 @@ public class CarEnvironment extends Environment {
         gui.changeSpeed(scaleSpeed);
     }
 
-    private void updateSpeedLimitPercept() {
+    private String updateSpeedLimitPercept() {
         removePerceptsByUnif(Literal.parseLiteral(SPEED_LIMIT_BASE));
-        addSpeedLimitPercept();
+        return addSpeedLimitPercept();
     }
 
-    private void addSpeedLimitPercept() {
+    private String addSpeedLimitPercept() {
         int speedLimit =
                 RoadElements.getLastSpeedLimitSign(
                                 roadsElementsVision.getPassedRoadElements()
                         ).map(SpeedLimitSign::getSpeedLimit)
-                        .orElse(60);
-
-        addPercept(speedLimitToLiteral(speedLimit));
+                        .orElse(defaultSpeedLimit);
+        var literal = speedLimitToLiteral(speedLimit);
+        addPercept(literal);
+        return literal.toString() + "\n";
     }
 
-    private void updateSignalsPercepts() {
+    private String updateSignalsPercepts() {
 
         removePerceptsByUnif(signTypeToLiteral(Sign.SignType.STOP));
 
-        RoadElements.getNextStopSign(
+        var literalStop = RoadElements.getNextStopSign(
                 roadsElementsVision.getNextRoadElements()
-        ).ifPresent(s -> addPercept(signToLiteral(s)));
+        ).map(LiteralConverter::signToLiteral);
+        literalStop.ifPresent(this::addPercept);
 
-        RoadElements.getNextTrafficLight(
-                roadsElementsVision.getNextRoadElements()
-        ).ifPresent(t -> addPercept(trafficLightToLiteral(t)));
+        var literalTrafficLight =
+                RoadElements.getNextTrafficLight(
+                        roadsElementsVision.getNextRoadElements()
+                ).map(LiteralConverter::trafficLightToLiteral);
+        literalTrafficLight.ifPresent(this::addPercept);
+        return literalStop
+                    .map(Object::toString)
+                    .map(s -> s+"\n")
+                    .orElse("")
+                + literalTrafficLight
+                        .map(Object::toString)
+                        .map(s -> s+"\n")
+                        .orElse("");
     }
 
-    private void updateGUIInfo() {
-        String info =
-                Stream.concat(
-                                roadsElementsVision.getNextRoadElements().stream(),
-                                roadsElementsVision.getPassedRoadElements().stream()
-                        )
-                        .map(Object::toString)
-                        .reduce("", (a, b) -> a + b + "\n");
-
+    private void updateGUIInfo(String info) {
         gui.changeInfo(info);
     }
 
