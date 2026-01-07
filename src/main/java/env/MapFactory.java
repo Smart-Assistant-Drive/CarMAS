@@ -54,14 +54,14 @@ public class MapFactory {
                 flows.add(flow);
                 PathSegment pathSegment = Mapper.mapPathSegmentDtoToPathSegment(segment, flow);
                 pathSegments.add(pathSegment);
-                SignsResponseDto signsDto = remoteRepository.getSigns(flowDto.getRoadId(), flowDto.getFlowId());
+                SignsResponseDto signsDto = remoteRepository.getSigns(segment.getRoadId(), String.valueOf(segment.getDirection()));
                 signs.addAll(
                         signsDto.getSigns()
                                 .stream()
                                 .map(signDto -> Mapper.mapSignDtoToSign(signDto, flow))
                                 .toList()
                 );
-                List<SemaphoreDto> semaphoresDto = remoteRepository.getTrafficLights(flowDto.getRoadId(), flowDto.getFlowId());
+                List<SemaphoreDto> semaphoresDto = remoteRepository.getTrafficLights(segment.getRoadId(), String.valueOf(segment.getDirection()));
                 trafficLights.addAll(
                                 semaphoresDto.stream()
                                 .map(semaphoreDto-> Mapper.mapSemaphoreDtoToSemaphore(semaphoreDto, flow))
