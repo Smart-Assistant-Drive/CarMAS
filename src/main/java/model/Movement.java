@@ -35,16 +35,45 @@ public class Movement {
                 currentFlow.getPath(), car.getPosition()
         );
 
-        position = new RoadPosition(segIndex, 0);
-        Vector initialDistance = vector(
+        int offset = (int) Points.distance(
                 currentFlow.getPath()[segIndex],
                 car.getPosition()
         );
-        notifyRoadChanged(null, currentFlow, currentSegment, pathIndex, initialDistance);
+
+        position = new RoadPosition(segIndex, offset);
+
+        notifyRoadChanged(
+                null,
+                currentFlow,
+                currentSegment,
+                position,
+                pathIndex,
+                getDistanceAsVector());
     }
 
     public void addListener(MovementListener listener) {
         listeners.add(listener);
+    }
+
+    public Flow getCurrentFlow() {
+        return currentFlow;
+    }
+
+    public RoadPosition getPosition() {
+        return position;
+    }
+
+    public Point getDestinationPoint() {
+        return path.getSegments()
+                .getLast()
+                .getEnd();
+    }
+
+    public Vector getDistanceAsVector() {
+        Point[] pts = currentFlow.getPath();
+        Point a = pts[position.getSegmentIndex()];
+        Point b = car.getPosition();
+        return vector(a, b);
     }
 
     public void move(double distance) {
@@ -113,14 +142,6 @@ public class Movement {
         Flow oldFlow = oldSegment.getFlow();
         int oldPathIndex = pathIndex;
 
-        Point[] roadPath = currentFlow.getPath();
-        int lastIndexPassed = position.getSegmentIndex();
-
-        Point lastPassedPoint = roadPath[lastIndexPassed];
-        Point carPos = car.getPosition();
-
-        Vector distanceFromLastPassed = vector(lastPassedPoint, carPos);
-
         // === AVANZAMENTO PATH ===
         pathIndex++;
         if (pathIndex >= path.getSegments().size()) {
@@ -128,8 +149,9 @@ public class Movement {
                     oldFlow,
                     null,
                     null,
+                    position,
                     oldPathIndex,
-                    distanceFromLastPassed
+                    getDistanceAsVector()
             );
             return false;
         }
@@ -145,8 +167,9 @@ public class Movement {
                 oldFlow,
                 newFlow,
                 currentSegment,
+                position,
                 oldPathIndex,
-                distanceFromLastPassed
+                getDistanceAsVector()
         );
 
         return true;
@@ -156,6 +179,7 @@ public class Movement {
             Flow previousFlow,
             Flow newFlow,
             PathSegment newSegment,
+            RoadPosition roadPosition,
             int indexFlow,
             Vector distance
     ) {
@@ -164,6 +188,7 @@ public class Movement {
                     previousFlow,
                     newFlow,
                     newSegment,
+                    roadPosition,
                     car,
                     indexFlow,
                     distance

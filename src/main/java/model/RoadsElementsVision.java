@@ -46,6 +46,7 @@ public class RoadsElementsVision implements MovementListener {
             Flow previousFlow,
             Flow newFlow,
             PathSegment segment,
+            RoadPosition roadPosition,
             Car car,
             int indexFlow,
             Vector distance
@@ -53,7 +54,7 @@ public class RoadsElementsVision implements MovementListener {
         this.currentFlow = newFlow;
 
         if (newFlow != null) {
-            update(new RoadPosition(0, 0));
+            update(roadPosition);
         } else {
             nextElements.clear();
             passedElements.clear();
