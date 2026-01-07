@@ -11,14 +11,20 @@ public class TrafficLight implements RoadElement {
         GREEN
     }
 
+    private final String id;
     private State state;
     private final Point position;
     private final Flow flow; // Identifier for the street this semaphore belongs to
 
-    public TrafficLight(Point position , Flow flow) {
+    public TrafficLight(String id, Point position , Flow flow) {
+        this.id = id;
         this.flow = flow;
         this.position = position;
         this.state = State.RED; // Default state
+    }
+
+    public String getId() {
+        return id;
     }
 
     public State getState() {

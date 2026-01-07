@@ -2,7 +2,6 @@ package repository;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import model.Car;
 import model.CarUpdate;
 import model.OtherCar;
 import model.path.Flow;
@@ -40,17 +39,13 @@ public class RemoteStream {
         return "trafficdt-physical-"+trafficTDId(flow)+"/carExited";
     }
 
-    public interface TrafficLightStateListener {
-        void onTrafficLightState(TrafficLight.State state);
-    }
-
     public interface CarListener {
         void onOtherCar(OtherCar car);
     }
 
-    public void trafficLightStateStream(String id, MqttRepository mqttRepository, TrafficLightStateListener listener) {
+    public void trafficLightStateStream(TrafficLight trafficLight, MqttRepository mqttRepository) {
         mqttRepository.addEventListener(event -> {
-            if (Objects.equals(event.getTopic(), trafficLightTopic(id))) {
+            if (Objects.equals(event.getTopic(), trafficLightTopic(trafficLight.getId()))) {
                 try {
                     ObjectMapper mapper = mqttRepository.getMapper();
                     TrafficLightMessage msg = mapper.readValue(event.getMessage(), TrafficLightMessage.class);
@@ -59,7 +54,7 @@ public class RemoteStream {
                         case "yellow" -> TrafficLight.State.YELLOW;
                         default -> TrafficLight.State.RED;
                     };
-                    listener.onTrafficLightState(state);
+                    trafficLight.setState(state);
                 } catch (Exception ignored) {}
             }
         });

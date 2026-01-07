@@ -74,6 +74,7 @@ public class Mapper {
             Flow flow
     ) {
         return new TrafficLight(
+                semaphoreDto.getId(),
                 mapCoordinateDtoToPoint(semaphoreDto.getPositionDto()),
                 flow
         );

@@ -137,9 +137,8 @@ public class CarEnvironment extends Environment {
         factory.getTrafficLights().forEach(
                 t ->
                         remoteStream.trafficLightStateStream(
-                                "",
-                                mqttRepository,
-                                t::setState
+                                t,
+                                mqttRepository
                         )
         );
         try {
