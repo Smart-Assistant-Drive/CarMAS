@@ -1,6 +1,7 @@
 package env;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import env.car_action.*;
 import gui.GUI;
 import gui.GUIEventInterface;
 import jason.asSyntax.Literal;
@@ -19,6 +20,8 @@ import repository.RemoteRepository;
 import repository.RemoteStream;
 
 import javax.swing.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.logging.Logger;
@@ -56,6 +59,7 @@ public class CarEnvironment extends Environment {
     @Override
     public void init(String[] args) {
         logger.info("Initializing environment...");
+
         try {
             mqttRepository = new MqttRepository(logger::warning);
         } catch (MqttException e) {
@@ -67,6 +71,7 @@ public class CarEnvironment extends Environment {
         initModel();
         initPercepts();
 
+        registerActions();
         logger.info("Environment ready.");
     }
 
@@ -259,47 +264,31 @@ public class CarEnvironment extends Environment {
        ACTION EXECUTION
        ========================= */
 
-    @Override
+    private final Map<String, CarAction> actions = new HashMap<>();
+
+    private void registerActions() {
+        actions.put("accelerate", new AccelerateAction());
+        actions.put("brake", new BrakeAction());
+        actions.put("keep_speed", new KeepSpeedAction());
+        actions.put("do_nothing", new DoNothingAction());
+        actions.put("move", new MoveAction(envTimer, movement));
+        actions.put("passedStop", new PassedStopAction(this::handlePassedStop));
+    }
+
     public boolean executeAction(String ag, Structure action) {
         logger.info(ag + " executes " + action);
 
-        double speed = car.getSpeed();
+        CarAction carAction = actions.get(action.getFunctor());
 
-        switch (action.getFunctor()) {
-
-            case "accelerate":
-                car.setSpeed(speed + 10);
-                break;
-
-            case "brake":
-                car.setSpeed(Math.max(0, speed - 5));
-                break;
-
-            case "keep_speed":
-                break;
-
-            case "do_nothing":
-                car.setSpeed(Math.max(0, speed - 0.5));
-                break;
-
-            case "move":
-                long elapsed = envTimer.getElapsedTime();
-                envTimer.reset();
-                movement.move(car.getSpeed() * elapsed / 3_600.0);
-                //roadsElementsVision.update(movement.getPosition());
-                break;
-
-            case "passedStop":
-                handlePassedStop();
-                break;
-
-            default:
-                logger.warning("Unknown action: " + action);
-                return false;
+        if (carAction == null) {
+            logger.warning("Unknown action: " + action.getFunctor());
+            return false;
         }
 
+        boolean result = carAction.execute(car);
+
         updatePercepts();
-        return true;
+        return result;
     }
 
     /* =========================
