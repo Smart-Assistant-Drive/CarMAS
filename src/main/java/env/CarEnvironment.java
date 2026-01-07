@@ -1,14 +1,12 @@
 package env;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import gui.GUI;
 import gui.GUIEventInterface;
 import jason.asSyntax.Literal;
 import jason.asSyntax.Structure;
 import jason.environment.Environment;
-import model.Car;
-import model.Movement;
-import model.OtherCar;
-import model.RoadsElementsVision;
+import model.*;
 import model.math.Point;
 import model.path.Path;
 import model.roadElement.RoadElements;
@@ -37,7 +35,7 @@ public class CarEnvironment extends Environment {
     private Movement movement;
     private RoadsElementsVision roadsElementsVision;
 
-    private final String plate =  randomPlate();
+    private final String plate = randomPlate();
     private final Car car = new Car(new Point(0, 0), 0, plate);
 
     private GUI gui;
@@ -46,6 +44,11 @@ public class CarEnvironment extends Environment {
     private final RemoteRepository repository = new RemoteRepository();
     private final RemoteStream remoteStream = new RemoteStream();
     private MqttRepository mqttRepository = null;
+
+    private final env.Timer envTimer = new env.Timer();
+    private final Scaler scaler = new Scaler(1);
+
+    private final int defaultSpeedLimit = 50;
 
     /* =========================
        ENV INITIALIZATION
@@ -82,6 +85,7 @@ public class CarEnvironment extends Environment {
             public void onStartCar() {
                 removePercept(Literal.parseLiteral("car_stopped"));
                 addPercept(Literal.parseLiteral("car_started"));
+                envTimer.reset();
             }
 
             @Override
@@ -113,9 +117,9 @@ public class CarEnvironment extends Environment {
 
     private void initModel() {
         MapFactory factory = new MapFactory(repository);
-        try{
+        try {
             factory.buildMap();
-        } catch (RuntimeException e){
+        } catch (RuntimeException e) {
             logger.severe("Failed to build map: " + e.getMessage());
             throw e;
         }
@@ -140,8 +144,7 @@ public class CarEnvironment extends Environment {
                     car.getPlate(),
                     this::updateOtherCarPercept
             );
-        }
-        catch (MqttException e){
+        } catch (MqttException e) {
             logger.severe("Failed to initialize other car stream: " + e.getMessage());
             throw new RuntimeException(e);
         }
@@ -152,7 +155,7 @@ public class CarEnvironment extends Environment {
 
     private void updateOtherCarPercept(OtherCar car) {
         removePerceptsByUnif(Literal.parseLiteral(OTHER_CAR_BASE));
-        addPercept(otherCarToLiteral(car));
+        addPercept(otherCarToLiteral(car, scaler));
     }
 
     private void initPercepts() {
@@ -181,9 +184,10 @@ public class CarEnvironment extends Environment {
     }
 
     private void updateSpeedPercept() {
+        double scaleSpeed = scaler.descaleValue(car.getSpeed());
         removePerceptsByUnif(Literal.parseLiteral(CURRENT_SPEED_BASE));
-        addPercept(currentSpeedToLiteral(car.getSpeed()));
-        gui.changeSpeed(car.getSpeed());
+        addPercept(currentSpeedToLiteral(scaleSpeed));
+        gui.changeSpeed(scaleSpeed);
     }
 
     private void updateSpeedLimitPercept() {
@@ -254,7 +258,9 @@ public class CarEnvironment extends Environment {
                 break;
 
             case "move":
-                movement.move(car.getSpeed() * 0.5);
+                long elapsed = envTimer.getElapsedTime();
+                envTimer.reset();
+                movement.move(car.getSpeed() * elapsed / 3_600.0);
                 //roadsElementsVision.update(movement.getPosition());
                 break;
 
