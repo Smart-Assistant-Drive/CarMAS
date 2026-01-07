@@ -44,6 +44,8 @@ public class CarUpdateMessage {
     public double getPositionX() { return positionX; }
     public double getPositionY() { return positionY; }
     public int getIndexP() { return indexP; }
+    @JsonProperty("dPointX")
     public double getDPointX() { return dPointX; }
+    @JsonProperty("dPointY")
     public double getDPointY() { return dPointY; }
 }

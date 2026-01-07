@@ -23,7 +23,7 @@ public class MqttRepository {
     public MqttRepository(String brokerUrl, Logger logger) throws MqttException {
         this.mapper = new ObjectMapper()
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        this.client = new MqttClient(brokerUrl, "traffic-light-client");
+        this.client = new MqttClient(brokerUrl, "car-client-" + MqttClient.generateClientId());
         this.logger = logger;
         this.logger.log("Connecting to broker at " + brokerUrl);
         connectAndSubscribe();
