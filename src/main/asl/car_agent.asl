@@ -17,8 +17,8 @@ car_off.
 car_state(car_off).
 
 break_speed(5).
-drag_speed(0.25).
-reaction_time(1.5).
+drag_speed(1).
+reaction_time(1).
 
 near(X1, Y1, X2, Y2, DN) :-
     distance(X1, Y1, X2, Y2, D) & D < DN.
@@ -97,7 +97,7 @@ arrest_car_event(E, SX, SY) :- element(traffic_light(yellow), SX, SY) & E = traf
 
 
 +car(D, S) <-
-    .print("Detected car ahead ",D, moving at speed ", S).
+    .print("Detected car ahead ", D, "moving at speed ", S).
 
 /* When the light turns green (environment percept updated) */
 +element(traffic_light(green), SX, SY) : near(X, Y, SX, SY, 10) <-
@@ -111,6 +111,11 @@ arrest_car_event(E, SX, SY) :- element(traffic_light(yellow), SX, SY) & E = traf
 /* -------------------------------------------------
    Plans
 ---------------------------------------------------*/
++!move_car : destination(SX, SY)
+             & position(X, Y)
+             & distance(X, Y, SX, SY, D)
+             & D < 10 <-
+    .print("Car arrived").
 
 +!move_car : car_state(car_on) <-
     .print("Moving car to new position");

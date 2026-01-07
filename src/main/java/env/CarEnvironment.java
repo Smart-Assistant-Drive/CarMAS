@@ -159,6 +159,7 @@ public class CarEnvironment extends Environment {
         addPercept(Literal.parseLiteral("car_stopped"));
         addPercept(currentSpeedToLiteral(car.getSpeed()));
         addPercept(positionToLiteral(car.getPosition()));
+        addPercept(destinationToLiteral(movement.getDestinationPoint()));
         addSpeedLimitPercept();
     }
 

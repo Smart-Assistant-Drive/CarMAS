@@ -1,5 +1,6 @@
 package model;
 
+import env.Scaler;
 import jason.asSyntax.Literal;
 import model.math.Point;
 import model.roadElement.Sign;
@@ -13,6 +14,7 @@ public class LiteralConverter {
     public static String SIGN_TYPE_BASE = "element(TYPE, X, Y)";
     public static String TRAFFIC_LIGHT_BASE = "element(traffic_light(STATE), X, Y)";
     public static String OTHER_CAR_BASE = "car(D, SPEED)";
+    public static String DESTINATION_BASE = "destination(X, Y)";
 
     public static Literal positionToLiteral(Point p) {
         return Literal.parseLiteral(POSITION_BASE.replace("X", String.valueOf(p.getX()))
@@ -43,8 +45,13 @@ public class LiteralConverter {
                 .replace("Y", String.valueOf(tl.getPosition().getY())));
     }
 
-    public static Literal otherCarToLiteral(OtherCar car) {
+    public static Literal otherCarToLiteral(OtherCar car, Scaler scaler) {
         return Literal.parseLiteral(OTHER_CAR_BASE.replace("D", String.valueOf(car.getDistance()))
-                .replace("SPEED", String.valueOf(car.getSpeed())));
+                .replace("SPEED", String.valueOf(scaler.descaleValue(car.getSpeed()))));
+    }
+
+    public static Literal destinationToLiteral(Point p) {
+        return Literal.parseLiteral(DESTINATION_BASE.replace("X", String.valueOf(p.getX()))
+                .replace("Y", String.valueOf(p.getY())));
     }
 }
