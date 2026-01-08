@@ -3,23 +3,23 @@ package env.car_action;
 import env.CarAction;
 import env.Timer;
 import model.Car;
-import model.Movement;
+import model.MovementEngine;
 
 public class MoveAction implements CarAction {
 
     private final Timer envTimer;
-    private final Movement movement;
+    private final MovementEngine movementEngine;
 
-    public MoveAction(Timer envTimer, Movement movement) {
+    public MoveAction(Timer envTimer, MovementEngine movementEngine) {
         this.envTimer = envTimer;
-        this.movement = movement;
+        this.movementEngine = movementEngine;
     }
 
     @Override
     public boolean execute(Car car) {
         long elapsed = envTimer.getElapsedTime();
         envTimer.reset();
-        movement.move(car.getSpeed() * elapsed / 3600.0);
+        movementEngine.move(car.getSpeed() * elapsed / 3600.0);
         return true;
     }
 }

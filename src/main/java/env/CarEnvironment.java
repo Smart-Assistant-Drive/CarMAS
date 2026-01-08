@@ -34,7 +34,7 @@ public class CarEnvironment extends Environment {
     private static final Logger logger =
             Logger.getLogger(CarEnvironment.class.getName());
 
-    private Movement movement;
+    private MovementEngine movementEngine;
     private RoadsElementsVision roadsElementsVision;
 
     private final String plate = randomPlate();
@@ -131,9 +131,9 @@ public class CarEnvironment extends Environment {
         car.setPosition(
                 path.getSegments().getFirst().getStart()
         );
-        movement = new Movement(car, path);
+        movementEngine = new MovementEngine(car, path);
         roadsElementsVision = new RoadsElementsVision(factory.getRoadElements());
-        movement.addListener(roadsElementsVision);
+        movementEngine.addListener(roadsElementsVision);
         factory.getTrafficLights().forEach(
                 t ->
                 {
@@ -160,15 +160,15 @@ public class CarEnvironment extends Environment {
         }
         MovementListenerMqtt movementListenerMqtt =
                 new MovementListenerMqtt(remoteStream, mqttRepository);
-        movement.addListener(movementListenerMqtt);
+        movementEngine.addListener(movementListenerMqtt);
         try {
             remoteStream.sendCarEnterRoad(
                     mqttRepository,
                     new CarUpdate(
                             car,
-                            movement.getCurrentFlow(),
-                            movement.getPosition().getSegmentIndex(),
-                            movement.getDistanceAsVector()
+                            movementEngine.getCurrentFlow(),
+                            movementEngine.getCurrentFlowSegmentIndex(),
+                            movementEngine.getDistanceFromSegmentStart()
                     )
             );
         } catch (JsonProcessingException e) {
@@ -176,12 +176,12 @@ public class CarEnvironment extends Environment {
         }
         roadsElementsVision.onRoadChanged(
                 null,
-                movement.getCurrentFlow(),
+                movementEngine.getCurrentFlow(),
                 path.getSegments().getFirst(),
-                movement.getPosition(),
+                movementEngine.getCurrentRoadPosition(),
                 car,
                 0,
-                movement.getDistanceAsVector()
+                movementEngine.getDistanceFromSegmentStart()
         );
     }
 
@@ -194,7 +194,7 @@ public class CarEnvironment extends Environment {
         addPercept(Literal.parseLiteral("car_stopped"));
         addPercept(currentSpeedToLiteral(car.getSpeed()));
         addPercept(positionToLiteral(car.getPosition()));
-        addPercept(destinationToLiteral(movement.getDestinationPoint()));
+        addPercept(destinationToLiteral(movementEngine.getDestination()));
         addSpeedLimitPercept();
     }
 
@@ -278,7 +278,7 @@ public class CarEnvironment extends Environment {
         actions.put("brake", new BrakeAction());
         actions.put("keep_speed", new KeepSpeedAction());
         actions.put("do_nothing", new DoNothingAction());
-        actions.put("move", new MoveAction(envTimer, movement));
+        actions.put("move", new MoveAction(envTimer, movementEngine));
         actions.put("passedStop", new PassedStopAction(this::handlePassedStop));
     }
 
