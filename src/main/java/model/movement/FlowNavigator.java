@@ -12,14 +12,19 @@ public class FlowNavigator {
 
     private final Flow flow;
     private RoadPosition position;
+    private RoadPosition endPosition;
 
-    public FlowNavigator(Flow flow, Point initialPoint) {
+    public FlowNavigator(Flow flow, Point initialPoint, Point endPoint) {
         this.flow = flow;
 
         int segIndex = Points.findContainingSegment(flow.getPath(), initialPoint);
         double offset = Points.distance(flow.getPath()[segIndex], initialPoint);
 
         this.position = new RoadPosition(segIndex, offset);
+
+        int endSegIndex = Points.findContainingSegment(flow.getPath(), endPoint);
+        double endOffset = Points.distance(flow.getPath()[endSegIndex], endPoint);
+        this.endPosition = new RoadPosition(endSegIndex, endOffset);
     }
 
     public Flow getFlow() {
@@ -31,7 +36,8 @@ public class FlowNavigator {
     }
 
     public boolean isAtEndOfFlow() {
-        return position.getSegmentIndex() >= flow.getPath().length - 1;
+        return position.getSegmentIndex() >= endPosition.getSegmentIndex() &&
+               position.getOffset() > endPosition.getOffset();
     }
 
     public Point getSegmentStart() {

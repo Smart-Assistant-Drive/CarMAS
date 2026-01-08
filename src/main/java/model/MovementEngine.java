@@ -31,7 +31,7 @@ public class MovementEngine {
         PathSegment first = pathNav.getCurrent();
         Flow initialFlow = first.getFlow();
 
-        this.flowNav = new FlowNavigator(initialFlow, car.getPosition());
+        this.flowNav = new FlowNavigator(initialFlow, car.getPosition(), first.getEnd());
         this.dispatcher = new MovementEventDispatcher(listeners);
 
         dispatcher.notifyRoadChanged(
@@ -116,7 +116,7 @@ public class MovementEngine {
 
         Flow newFlow = next.getFlow();
         car.setPosition(next.getStart());
-        flowNav = new FlowNavigator(newFlow, car.getPosition());
+        flowNav = new FlowNavigator(newFlow, car.getPosition(), next.getEnd());
 
         dispatcher.notifyRoadChanged(
                 oldFlow, newFlow, next,
