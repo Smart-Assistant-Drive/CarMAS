@@ -161,7 +161,17 @@ public class Movement {
         currentFlow = newFlow;
 
         car.setPosition(currentSegment.getStart());
-        position = new RoadPosition(0, 0);
+
+        int segIndex = Points.findContainingSegment(
+                currentFlow.getPath(), currentSegment.getStart()
+        );
+
+        int offset = (int) Points.distance(
+                currentFlow.getPath()[segIndex],
+                currentSegment.getStart()
+        );
+
+        position = new RoadPosition(segIndex, offset);
 
         notifyRoadChanged(
                 oldFlow,
