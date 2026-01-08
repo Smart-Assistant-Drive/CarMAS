@@ -17,7 +17,7 @@ car_off.
 car_state(car_off).
 
 break_speed(5).
-drag_speed(1).
+drag_speed(0.5).
 reaction_time(1).
 
 near(X1, Y1, X2, Y2, DN) :-
@@ -39,7 +39,7 @@ dragging(X1, Y1, X2, Y2, CS) :- distance(X1, Y1, X2, Y2, D)
                                  & D < SD + 10.
 
 distance(X1, Y1, X2, Y2, D) :-
-    utils.sqrt(D, (X1 - X2)*(X1 - X2) + (Y1 - Y2)*(Y1 - Y2)).
+    utils.sqrt(D, (X1 - X2) * (X1 - X2) + (Y1 - Y2)*(Y1 - Y2)).
 
 /* Safe distance rules */
 
@@ -100,7 +100,8 @@ arrest_car_event(E, SX, SY) :- element(traffic_light(yellow), SX, SY) & E = traf
     .print("Detected car ahead ", D, "moving at speed ", S).
 
 /* When the light turns green (environment percept updated) */
-+element(traffic_light(green), SX, SY) : near(X, Y, SX, SY, 10) <-
++element(traffic_light(green), SX, SY) :  position(X, Y)
+        & near(X, Y, SX, SY, 10) <-
     .print("Traffic light at (", SX, ", ", SY, ") turned green, resuming driving");
     !reachSpeedLimit.
 
