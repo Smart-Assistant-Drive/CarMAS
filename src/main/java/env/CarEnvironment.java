@@ -136,10 +136,17 @@ public class CarEnvironment extends Environment {
         movement.addListener(roadsElementsVision);
         factory.getTrafficLights().forEach(
                 t ->
+                {
+                    try {
                         remoteStream.trafficLightStateStream(
                                 t,
-                                mqttRepository
-                        )
+                                mqttRepository,
+                                trafficLight -> updateSignalsPercepts()
+                        );
+                    } catch (MqttException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
         );
         try {
             remoteStream.nextCarStream(

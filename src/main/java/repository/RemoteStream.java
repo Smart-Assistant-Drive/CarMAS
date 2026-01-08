@@ -43,7 +43,11 @@ public class RemoteStream {
         void onOtherCar(OtherCar car);
     }
 
-    public void trafficLightStateStream(TrafficLight trafficLight, MqttRepository mqttRepository) {
+    public interface TrafficLightListener {
+        void onTrafficLightChange(TrafficLight trafficLight);
+    }
+
+    public void trafficLightStateStream(TrafficLight trafficLight, MqttRepository mqttRepository, TrafficLightListener listener) throws MqttException {
         mqttRepository.addEventListener(event -> {
             if (Objects.equals(event.getTopic(), trafficLightTopic(trafficLight.getId()))) {
                 try {
@@ -55,6 +59,7 @@ public class RemoteStream {
                         default -> TrafficLight.State.RED;
                     };
                     trafficLight.setState(state);
+                    listener.onTrafficLightChange(trafficLight);
                 } catch (Exception ignored) {}
             }
         });
