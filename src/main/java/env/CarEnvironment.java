@@ -240,6 +240,7 @@ public class CarEnvironment extends Environment {
         ).map(LiteralConverter::signToLiteral);
         literalStop.ifPresent(this::addPercept);
 
+        removePerceptsByUnif(Literal.parseLiteral(TRAFFIC_LIGHT_BASE));
         var literalTrafficLight =
                 RoadElements.getNextTrafficLight(
                         roadsElementsVision.getNextRoadElements()
