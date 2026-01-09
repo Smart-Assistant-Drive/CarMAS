@@ -46,8 +46,10 @@ public class LiteralConverter {
     }
 
     public static Literal otherCarToLiteral(OtherCar car, Scaler scaler) {
-        return Literal.parseLiteral(OTHER_CAR_BASE.replace("D", String.valueOf(car.getDistance()))
-                .replace("SPEED", String.valueOf(scaler.descaleValue(car.getSpeed()))));
+        return Literal.parseLiteral(OTHER_CAR_BASE
+                .replace("SPEED", String.valueOf(scaler.descaleValue(car.getSpeed())))
+                .replace("D", String.valueOf(car.getDistance()))
+                );
     }
 
     public static Literal destinationToLiteral(Point p) {
