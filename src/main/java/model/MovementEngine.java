@@ -51,7 +51,10 @@ public class MovementEngine {
 
     public void move(double distance) {
 
+        var done = false;
         while (distance > 0) {
+
+            done = true;
 
             Point[] path = flowNav.getPath();
             RoadPosition pos = flowNav.getPosition();
@@ -88,6 +91,16 @@ public class MovementEngine {
                 continue;
             }
 
+            dispatcher.notifyMovementUpdated(
+                    flowNav.getFlow(),
+                    car,
+                    flowNav.getPosition(),
+                    pathNav.getIndex(),
+                    flowNav.distanceFromSegmentStart(car.getPosition())
+            );
+        }
+
+        if (!done){
             dispatcher.notifyMovementUpdated(
                     flowNav.getFlow(),
                     car,
