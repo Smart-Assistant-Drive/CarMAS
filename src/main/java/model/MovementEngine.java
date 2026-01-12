@@ -121,8 +121,10 @@ public class MovementEngine {
         if (next == null) {
             dispatcher.notifyRoadChanged(
                     oldFlow, null, null,
-                    flowNav.getPosition(), oldIndex,
-                    car, flowNav.distanceFromSegmentStart(car.getPosition())
+                    flowNav.getPosition(),
+                    oldIndex,
+                    car,
+                    flowNav.distanceFromSegmentStart(car.getPosition())
             );
             return false;
         }
@@ -132,8 +134,11 @@ public class MovementEngine {
         flowNav = new FlowNavigator(newFlow, car.getPosition(), next.getEnd());
 
         dispatcher.notifyRoadChanged(
-                oldFlow, newFlow, next,
-                flowNav.getPosition(), oldIndex,
+                oldFlow,
+                newFlow,
+                next,
+                flowNav.getPosition(),
+                oldIndex,
                 car, flowNav.distanceFromSegmentStart(car.getPosition())
         );
 

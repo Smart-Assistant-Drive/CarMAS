@@ -41,7 +41,7 @@ public class MovementListenerMqtt implements MovementListener {
                         new CarUpdate(
                                 car,
                                 newFlow,
-                                indexFlow,
+                                roadPosition.getSegmentIndex(),
                                 distance
                         )
                 );
@@ -57,7 +57,7 @@ public class MovementListenerMqtt implements MovementListener {
                     new CarUpdate(
                             car,
                             previousFlow,
-                            indexFlow,
+                            roadPosition.getSegmentIndex(),
                             distance
                     )
             );
@@ -78,7 +78,7 @@ public class MovementListenerMqtt implements MovementListener {
                     new CarUpdate(
                             car,
                             flow,
-                            indexFlow,
+                            carPos.getSegmentIndex(),
                             distance
                     )
             );
