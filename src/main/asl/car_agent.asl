@@ -19,6 +19,7 @@ car_state(car_off).
 break_speed(5).
 drag_speed(0.5).
 reaction_time(1).
+car_distance(70).
 
 near(X1, Y1, X2, Y2, DN) :-
     distance(X1, Y1, X2, Y2, D) & D < DN.
@@ -44,13 +45,14 @@ distance(X1, Y1, X2, Y2, D) :-
 /* Safe distance rules */
 
 /* Normal safe distance: proportional to front car speed */
-normal_safe_distance(S, SD) :- SD = S / 2 + 10.
+normal_safe_distance(S, SD) :- car_distance(D) & SD = S / 2 + 10 + D.
 
 /* Dynamic safe distance: based on relative speed (if faster than front car) */
 dynamic_safe_distance(CS, OS, SD) :-
+    car_distance(D) &
     Diff = CS - OS &
     Diff > 0 &
-    SD = 10 + Diff * 2.
+    SD = D + 10 + Diff * 2.
 
 dynamic_safe_distance(CS, OS, SD) :-
     Diff = CS - OS &
@@ -119,6 +121,14 @@ hazard(Level, E) :-
     & near(X, Y, SX, SY, 10)
     & currentSpeed(0)
     & Level = 0.
+
+hazard(Level, E) :-
+    car(CD, S)
+    & car_distance(D)
+    & currentSpeed(0)
+    & CD < D
+    & Level = 0
+    & E = car(CD, S).
 
 /* Determine hazard level based on current speed and speed limit */
 
