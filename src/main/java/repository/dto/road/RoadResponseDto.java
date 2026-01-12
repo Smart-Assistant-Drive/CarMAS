@@ -1,12 +1,15 @@
 package repository.dto.road;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.hateoas.RepresentationModel;
 
 /**
  *
  */
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class RoadResponseDto extends RepresentationModel<RoadResponseDto> {
 
     private final String roadId;

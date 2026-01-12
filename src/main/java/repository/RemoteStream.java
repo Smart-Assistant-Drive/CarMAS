@@ -20,7 +20,7 @@ public class RemoteStream {
         return "semaphore/" + id + "/change";
     }
     private String carUpdateTopic(String plate) {
-        return "trafficdt-digital-cars-digital-adapter/cars/"+plate+"/distanceFromNext";
+        return "trafficdt-digital-cars/+/cars/"+plate+"/distanceFromNext";
     }
 
     private String trafficTDId(Flow flow) {
@@ -68,7 +68,7 @@ public class RemoteStream {
     public void nextCarStream(MqttRepository mqttRepository, String plate, CarListener listener) throws MqttException {
         mqttRepository.connectToTopic(carUpdateTopic(plate));
         mqttRepository.addEventListener(event -> {
-            if (Objects.equals(event.getTopic(), carUpdateTopic(plate))) {
+            if (event.getTopic().matches(carUpdateTopic(plate).replace("+", "[^/]+"))) {
                 try {
                     ObjectMapper mapper = mqttRepository.getMapper();
                     OtherCarMessage otherCar = mapper.readValue(event.getMessage(), OtherCarMessage.class);
