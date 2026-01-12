@@ -179,7 +179,7 @@ public class CarEnvironment extends Environment {
                 path.getSegments().getFirst(),
                 movementEngine.getCurrentRoadPosition(),
                 car,
-                0,
+                movementEngine.getCurrentFlowSegmentIndex(),
                 movementEngine.getDistanceFromSegmentStart()
         );
     }
