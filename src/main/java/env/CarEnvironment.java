@@ -20,10 +20,8 @@ import repository.RemoteRepository;
 import repository.RemoteStream;
 
 import javax.swing.*;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.Timer;
-import java.util.TimerTask;
 import java.util.logging.Logger;
 
 import static model.LiteralConverter.*;
@@ -49,6 +47,7 @@ public class CarEnvironment extends Environment {
 
     private final env.Timer envTimer = new env.Timer();
     private final Scaler scaler = new Scaler(1);
+    private Optional<OtherCar> otherCar = Optional.empty();
 
     private final int defaultSpeedLimit = 50;
 
@@ -78,7 +77,7 @@ public class CarEnvironment extends Environment {
     private void initGUI() {
         //CarEnvironment env = this;
 
-        gui = new GUI(new GUIEventInterface() {
+        gui = new GUI(plate, new GUIEventInterface() {
 
             @Override
             public void onInsertLicense(String license) {
@@ -188,6 +187,8 @@ public class CarEnvironment extends Environment {
     private void updateOtherCarPercept(OtherCar car) {
         removePerceptsByUnif(Literal.parseLiteral(OTHER_CAR_BASE));
         addPercept(otherCarToLiteral(car, scaler));
+        otherCar = Optional.of(car);
+        updatePercepts();
     }
 
     private void initPercepts() {
@@ -207,7 +208,11 @@ public class CarEnvironment extends Environment {
         updateSpeedPercept();
         var speedLimit = updateSpeedLimitPercept();
         var signals = updateSignalsPercepts();
-        updateGUIInfo(speedLimit + signals);
+        var otherCarString = "";
+        if (otherCar.isPresent()) {
+            otherCarString = otherCarToLiteral(otherCar.get(), scaler).toString();
+        }
+        updateGUIInfo(speedLimit + signals + otherCarString);
     }
 
     private void updatePositionPercept() {

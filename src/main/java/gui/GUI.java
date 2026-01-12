@@ -21,9 +21,9 @@ public class GUI extends JFrame {
 
     private final GUIEventInterface guiEventInterface;
 
-    public GUI(GUIEventInterface guiEventInterface) {
+    public GUI(String plate, GUIEventInterface guiEventInterface) {
         this.guiEventInterface = guiEventInterface;
-        setTitle("Car Control");
+        setTitle("Car Control "+plate);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setSize(400, 300);
 
