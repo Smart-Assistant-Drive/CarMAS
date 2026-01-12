@@ -63,6 +63,96 @@ arrest_car_event(E, SX, SY) :- element(traffic_light(red), SX, SY) & E = traffic
 arrest_car_event(E, SX, SY) :- element(traffic_light(yellow), SX, SY) & E = traffic_light(yellow).
 
 /* -------------------------------------------------
+   Hazard levels
+---------------------------------------------------*/
+
+hazard(Level, E) :-
+    arrest_car_event(E, SX, SY)
+    & currentSpeed(CS)
+    & position(X, Y)
+    & stopping(X, Y, SX, SY, CS)
+    & CS > 0
+    & Level = 2.
+
+hazard(Level, E) :-
+    car(D, OS)
+    & position(CX, CY)
+    & currentSpeed(CS)
+    & CS > OS
+    & dynamic_safe_distance(CS, OS, DSD)
+    & D < DSD
+    & Level = 2
+    & E = car(D, OS).
+
+hazard(Level, E) :-
+    arrest_car_event(E, SX, SY)
+    & currentSpeed(CS)
+    & position(X, Y)
+    & dragging(X, Y, SX, SY, CS)
+    & CS > 15
+    & Level = 1.
+
+hazard(Level, E) :-
+    car(D, S)
+    & position(CX, CY)
+    & currentSpeed(CS)
+    & dynamic_safe_distance(CS, S, DSD)
+    & normal_safe_distance(S, NSD)
+    & D >= DSD
+    & D <= NSD
+    & Level = 1
+    & E = car(D, S).
+
+hazard(Level, E) :-
+    car(D, S)
+    & position(CX, CY)
+    & currentSpeed(CS)
+    & dynamic_safe_distance(CS, S, DSD)
+    & D > DSD
+    & D <= NSD + 20
+    & Level = 0
+    & E = car(D, S).
+
+hazard(Level, E) :-
+    arrest_car_event(E, SX, SY)
+    & position(X, Y)
+    & near(X, Y, SX, SY, 10)
+    & currentSpeed(0)
+    & Level = 0.
+
+/* Determine hazard level based on current speed and speed limit */
+
+hazard(Level, E) :-
+    currentSpeed(CS)
+    & speedLimit(SL)
+    & CS > SL + 20
+    & Level = 2
+    & E = speed_limit_violation.
+
+hazard(Level, E) :-
+    currentSpeed(CS)
+    & speedLimit(SL)
+    & CS > SL
+    & CS <= SL + 20
+    & Level = 1
+    & E = speed_limit_violation.
+
+hazard(Level, E) :-
+    currentSpeed(CS)
+    & speedLimit(SL)
+    & CS <= SL
+    & CS >= SL - 5
+    & Level = 0
+    & E = no_hazard.
+
+hazard(Level, E) :-
+    currentSpeed(CS)
+    & speedLimit(SL)
+    & CS < SL - 5
+    & Level = -1
+    & E = less_hazard.
+
+/* -------------------------------------------------
    Events
 ---------------------------------------------------*/
 +position(X, Y) <-
@@ -136,127 +226,38 @@ arrest_car_event(E, SX, SY) :- element(traffic_light(yellow), SX, SY) & E = traf
     +mode(driver);
     .print("Car is off, cannot reach speed limit").
 
-/* 1. Handle stop signs and traffic lights */
-/*
-+!reachSpeedLimit : arrest_car_event(E, SX, SY)
-                    & currentSpeed(CS)
-                    & position(X, Y)
-                    & distance(X, Y, SX, SY, D)
-                     <-
-    .print("Detected ", E, " element at (", SX, ", ", SY, ")");
-    .print("Speed is ", CS, ", need to approach and stop if needed");
-    .print("Position is (", X, ", ", Y, ")");
-    .print("Distance to ", E, " element is ", D, "m");
-    .wait(1000);
-    !reachSpeedLimit.
-*/
+/* 1. React speed limit to avoid hazards based on their level */
 
-+!reachSpeedLimit : arrest_car_event(E, SX, SY)
-                    & currentSpeed(CS)
-                    & position(X, Y)
-                    & stopping(X, Y, SX, SY, CS)
-                    & CS > 0 <-
-    .print("Approaching ", E, " element at (", SX, ", ", SY, "), slowing down with brakes");
++!reachSpeedLimit : hazard(2, E) <-
+    .print("Moderate hazard detected, braking");
+    .print("Hazard event: ", E);
     brake;
     .wait(1000);
     !reachSpeedLimit.
 
-
-+!reachSpeedLimit : arrest_car_event(E, SX, SY)
-                    & currentSpeed(CS)
-                    & position(X, Y)
-                    & dragging(X, Y, SX, SY, CS)
-                    & CS > 15 <-
-    .print("Approaching ", E, " element at (", SX, ", ", SY, "), slowing down");
++!reachSpeedLimit : hazard(1, E) <-
+    .print("Minor hazard detected, slowing down slightly");
+    .print("Hazard event: ", E);
     do_nothing;
     .wait(1000);
     !reachSpeedLimit.
 
-
-+!reachSpeedLimit : arrest_car_event(E, SX, SY)
-                    & position(X, Y)
-                    & near(X, Y, SX, SY, 10)
-                    & currentSpeed(0) <-
-    .print("Stopped at ", E, " sign (", SX, ", ", SY, "), waiting before resuming");
-    .wait(2000);
-    passedStop(SX, SY);
-    -E;
-    .print("STOP complete, wait to resume driving").
-
-/* 2. Maintain safe distance from other cars */
-
-/* When the car ahead is too close — brake (dynamic distance) */
-+!reachSpeedLimit : car(D, OS)
-                    & position(CX, CY)
-                    & currentSpeed(CS)
-                    & CS > OS
-                    & dynamic_safe_distance(CS, OS, DSD)
-                    & D < DSD <-
-    .print("Too close to car ahead at (", X, ", ", Y, "), brake. Dynamic safe distance = ", DSD, "m, actual = ", D, "m");
-    brake;
-    .wait(1000);
-    !reachSpeedLimit.
-
-/* When the car ahead is at normal safe distance — slow down */
-+!reachSpeedLimit : car(D, S)
-                    & position(CX, CY)
-                    & currentSpeed(CS)
-                    & dynamic_safe_distance(CS, S, DSD)
-                    & normal_safe_distance(S, NSD)
-                    & D >= DSD
-                    & D <= NSD <-
-    .print("Maintaining safe distance (", D, "m) behind car at (", X, ", ", Y, ") — NSD = ", NSD);
-    do_nothing;
-    .wait(1000);
-    !reachSpeedLimit.
-
-/* When the car ahead is far but not to far keep speed*/
-+!reachSpeedLimit : car(D, S)
-                    & position(CX, CY)
-                    & currentSpeed(CS)
-                    & dynamic_safe_distance(CS, S, DSD)
-                    & D > DSD
-                    & D <= NSD + 20 <-
-    .print("Car ahead at (", X, ", ", Y, ") is far but not too far (", D, "m) — NSD = ", NSD);
++!reachSpeedLimit : hazard(0, E) <-
+    .print("No hazards detected, keeping speed");
+    .print("Hazard event: ", E);
     keep_speed;
     .wait(1000);
     !reachSpeedLimit.
 
-/* 3. Adjust speed to reach speed limit */
-
-+!reachSpeedLimit : currentSpeed(CS)
-                    & speedLimit(SL)
-                    & CS < SL <-
-    .print("Current speed: ", CS, ", below speed limit: ", SL);
-    .print("Speeding up to reach speed limit");
++!reachSpeedLimit : hazard(-1, E) <-
+    .print("No hazards detected, proceeding to reach speed limit");
+    .print("Hazard event: ", E);
     accelerate;
     .wait(1000);
     !reachSpeedLimit.
 
-+!reachSpeedLimit : currentSpeed(CS)
-                    & speedLimit(SL)
-                    & CS = SL <-
-    .print("Current speed: ", CS, ", at speed limit: ", SL);
-    .print("Maintaining current speed");
-    keep_speed;
-    .wait(1000);
-    !reachSpeedLimit.
-
-+!reachSpeedLimit : currentSpeed(CS)
-                    & speedLimit(SL)
-                    & CS > SL + 20 <-
-    .print("Current speed: ", CS, ", above speed limit: ", SL);
-    .print("Slowing down to reach speed limit");
-    brake;
-    .wait(1000);
-    !reachSpeedLimit.
-
-+!reachSpeedLimit : currentSpeed(CS)
-                    & speedLimit(SL)
-                    & CS > SL
-                    & CS <= SL + 20 <-
-    .print("Current speed: ", CS, ", slightly above speed limit: ", SL);
-    .print("Gently slowing down to reach speed limit");
++!reachSpeedLimit <-
+    .print("No plans applicable, slowing down to be safe and avoid potential problems");
     do_nothing;
     .wait(1000);
     !reachSpeedLimit.
