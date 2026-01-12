@@ -106,16 +106,6 @@ hazard(Level, E) :-
     & E = car(D, S).
 
 hazard(Level, E) :-
-    car(D, S)
-    & position(CX, CY)
-    & currentSpeed(CS)
-    & dynamic_safe_distance(CS, S, DSD)
-    & D > DSD
-    & D <= NSD + 20
-    & Level = 0
-    & E = car(D, S).
-
-hazard(Level, E) :-
     arrest_car_event(E, SX, SY)
     & position(X, Y)
     & near(X, Y, SX, SY, 10)
