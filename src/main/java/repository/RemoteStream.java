@@ -72,7 +72,9 @@ public class RemoteStream {
                 try {
                     ObjectMapper mapper = mqttRepository.getMapper();
                     OtherCarMessage otherCar = mapper.readValue(event.getMessage(), OtherCarMessage.class);
-                    listener.onOtherCar(mapOtherCarDtoToOtherCar(otherCar));
+                    if(!Objects.equals(otherCar.getIdNextCar(), plate)) {
+                        listener.onOtherCar(mapOtherCarDtoToOtherCar(otherCar));
+                    }
                 } catch (Exception ignored) {}
             }
         });
