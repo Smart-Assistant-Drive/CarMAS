@@ -11,6 +11,7 @@ import repository.dto.car.CarUpdateMessage;
 import repository.dto.car.OtherCarMessage;
 import repository.dto.semaphore.TrafficLightMessage;
 import java.util.Objects;
+import java.util.Optional;
 
 import static repository.Mapper.mapCarUpdateToCarUpdateMessage;
 import static repository.Mapper.mapOtherCarDtoToOtherCar;
@@ -40,7 +41,7 @@ public class RemoteStream {
     }
 
     public interface CarListener {
-        void onOtherCar(OtherCar car);
+        void onOtherCar(Optional<OtherCar> car);
     }
 
     public interface TrafficLightListener {
@@ -73,7 +74,11 @@ public class RemoteStream {
                     ObjectMapper mapper = mqttRepository.getMapper();
                     OtherCarMessage otherCar = mapper.readValue(event.getMessage(), OtherCarMessage.class);
                     if(!Objects.equals(otherCar.getIdNextCar(), plate)) {
-                        listener.onOtherCar(mapOtherCarDtoToOtherCar(otherCar));
+                        if(otherCar.getDistance() < 0) {
+                            listener.onOtherCar(Optional.empty());
+                        } else {
+                            listener.onOtherCar(Optional.of(mapOtherCarDtoToOtherCar(otherCar)));
+                        }
                     }
                 } catch (Exception ignored) {}
             }

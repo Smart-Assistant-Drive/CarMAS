@@ -184,11 +184,16 @@ public class CarEnvironment extends Environment {
         );
     }
 
-    private void updateOtherCarPercept(OtherCar car) {
+    private void updateOtherCarPercept(Optional<OtherCar> car) {
         removePerceptsByUnif(Literal.parseLiteral(OTHER_CAR_BASE));
-        addPercept(otherCarToLiteral(car, scaler));
-        otherCar = Optional.of(car);
-        updatePercepts();
+        if(car.isEmpty()) {
+            otherCar = Optional.empty();
+            updatePercepts();
+        }else {
+            addPercept(otherCarToLiteral(car.get(), scaler));
+            otherCar = car;
+            updatePercepts();
+        }
     }
 
     private void initPercepts() {
