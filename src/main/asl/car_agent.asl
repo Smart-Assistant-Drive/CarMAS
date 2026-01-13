@@ -148,7 +148,7 @@ hazard(Level, E) :-
 hazard(Level, E) :-
     currentSpeed(CS)
     & speedLimit(SL)
-    & CS < SL - 5
+    & CS < SL
     & Level = -1
     & E = less_hazard.
 
@@ -187,7 +187,7 @@ hazard(Level, E) :-
 
 
 +car(D, S) <-
-    .print("Detected car ahead ", D, "moving at speed ", S).
+    .print("Detected car ahead ", D, " moving at speed ", S).
 
 /* When the light turns green (environment percept updated) */
 +element(traffic_light(green), SX, SY) :  position(X, Y)
